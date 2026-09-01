@@ -1,316 +1,204 @@
 <!DOCTYPE html>
 <html lang="ru">
-
 <head>
-
   <meta charset="UTF-8">
 
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1.0, user-scalable=no"
+    content="width=device-width,initial-scale=1,user-scalable=no"
   >
 
-  <title>AR — Рогозин Дмитрий</title>
+  <title>AR — Дмитрий Рогозин</title>
 
-
-  <!-- A-FRAME -->
   <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
-
-
-  <!-- MIND AR -->
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
-
   <style>
-
-    html,
-    body {
-
+    html, body {
       margin: 0;
-
       width: 100%;
       height: 100%;
-
       overflow: hidden;
-
-      background: black;
-
+      background: #000;
       font-family: Arial, sans-serif;
-
     }
-
 
     #hint {
-
       position: fixed;
-
       z-index: 1000;
-
       left: 50%;
       bottom: 25px;
-
       transform: translateX(-50%);
-
       padding: 12px 18px;
-
       border-radius: 14px;
-
-      background: rgba(0,0,0,0.6);
-
-      color: white;
-
+      background: rgba(0,0,0,.55);
+      color: #fff;
       font-size: 14px;
-
       text-align: center;
-
       pointer-events: none;
-
+      white-space: nowrap;
     }
 
-
-    #soundButton {
-
+    #sound {
       position: fixed;
-
       z-index: 1100;
-
-      top: 20px;
+      top: 18px;
       left: 50%;
-
       transform: translateX(-50%);
-
-      border: none;
-
-      padding: 13px 20px;
-
+      padding: 12px 18px;
+      border: 0;
       border-radius: 14px;
-
-      background: white;
-
-      color: black;
-
-      font-size: 15px;
-
-      font-weight: 600;
-
+      background: #fff;
+      color: #000;
+      font-size: 14px;
+      font-weight: 700;
     }
-
   </style>
-
 
   <script>
 
-    /*
-    =================================================
-    ПРОЗРАЧНОЕ ВИДЕО RGB + ALPHA MASK
-    =================================================
-    */
-
-    AFRAME.registerComponent("alpha-video", {
+    AFRAME.registerComponent("transparent-video", {
 
       schema: {
-
-        src: {
-          type: "selector"
-        }
-
+        src: { type: "selector" }
       },
-
 
       init: function () {
 
         const video = this.data.src;
 
+        const texture = new THREE.VideoTexture(video);
 
-        /*
-        Создаём видеотекстуру напрямую через THREE.js
-        */
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        texture.generateMipmaps = false;
 
-        const texture =
-          new THREE.VideoTexture(video);
+        const material = new THREE.ShaderMaterial({
+
+          uniforms: {
+            map: { value: texture }
+          },
+
+          vertexShader: `
+
+            varying vec2 vUv;
+
+            void main() {
+
+              vUv = uv;
+
+              gl_Position =
+                projectionMatrix *
+                modelViewMatrix *
+                vec4(position, 1.0);
+
+            }
+
+          `,
+
+          fragmentShader: `
+
+            precision mediump float;
+
+            uniform sampler2D map;
+
+            varying vec2 vUv;
+
+            void main() {
+
+              /*
+              person_alpha.webm:
+              левая половина = изображение человека
+              правая половина = alpha mask
+              */
+
+              vec2 rgbUV =
+                vec2(
+                  vUv.x * 0.5,
+                  vUv.y
+                );
+
+              vec2 maskUV =
+                vec2(
+                  0.5 + vUv.x * 0.5,
+                  vUv.y
+                );
+
+              vec4 rgb =
+                texture2D(
+                  map,
+                  rgbUV
+                );
+
+              float mask =
+                texture2D(
+                  map,
+                  maskUV
+                ).r;
 
 
-        texture.minFilter =
-          THREE.LinearFilter;
+              /*
+              Делаем фон полностью прозрачным
+              */
 
-        texture.magFilter =
-          THREE.LinearFilter;
-
-        texture.generateMipmaps =
-          false;
-
-
-        this.texture = texture;
-
+              float alpha =
+                smoothstep(
+                  0.18,
+                  0.60,
+                  mask
+                );
 
 
-        /*
-        GLSL SHADER
-
-        Левая половина видео = RGB
-        Правая половина = ALPHA MASK
-        */
-
-        const material =
-          new THREE.ShaderMaterial({
-
-            uniforms: {
-
-              map: {
-                value: texture
+              if (alpha < 0.03) {
+                discard;
               }
 
-            },
 
+              /*
+              Дополнительно убираем почти чёрные
+              пиксели по краям
+              */
 
-            vertexShader: `
+              float brightness =
+                max(
+                  rgb.r,
+                  max(rgb.g, rgb.b)
+                );
 
-              varying vec2 vUv;
-
-
-              void main() {
-
-                vUv = uv;
-
-
-                gl_Position =
-
-                  projectionMatrix *
-
-                  modelViewMatrix *
-
-                  vec4(position, 1.0);
-
+              if (
+                brightness < 0.025 &&
+                alpha < 0.65
+              ) {
+                discard;
               }
 
-            `,
 
+              gl_FragColor =
+                vec4(
+                  rgb.rgb,
+                  alpha
+                );
 
-            fragmentShader: `
+            }
 
-              precision mediump float;
+          `,
 
+          transparent: true,
+          depthWrite: false,
+          side: THREE.DoubleSide
 
-              uniform sampler2D map;
+        });
 
-              varying vec2 vUv;
-
-
-
-              void main() {
-
-
-                /*
-                RGB — левая половина
-                */
-
-                vec2 rgbUV =
-                  vec2(
-                    vUv.x * 0.5,
-                    vUv.y
-                  );
-
-
-
-                /*
-                MASK — правая половина
-                */
-
-                vec2 maskUV =
-                  vec2(
-                    0.5 + vUv.x * 0.5,
-                    vUv.y
-                  );
-
-
-
-                vec4 rgb =
-                  texture2D(
-                    map,
-                    rgbUV
-                  );
-
-
-
-                float alpha =
-                  texture2D(
-                    map,
-                    maskUV
-                  ).r;
-
-
-
-                /*
-                Немного очищаем края
-                */
-
-                alpha =
-                  smoothstep(
-                    0.08,
-                    0.90,
-                    alpha
-                  );
-
-
-
-                /*
-                Полностью убираем фон
-                */
-
-                if(alpha < 0.02) {
-
-                  discard;
-
-                }
-
-
-
-                gl_FragColor =
-                  vec4(
-                    rgb.rgb,
-                    alpha
-                  );
-
-              }
-
-            `,
-
-
-            transparent: true,
-
-            depthWrite: false,
-
-            depthTest: true,
-
-            side: THREE.DoubleSide
-
-          });
-
-
-
-        this.material =
-          material;
-
-
-
-        /*
-        Устанавливаем материал на plane
-        */
 
         const applyMaterial = () => {
-
 
           const mesh =
             this.el.getObject3D("mesh");
 
+          if (mesh) {
 
-          if(mesh) {
-
-            mesh.material =
-              material;
-
-            mesh.material.needsUpdate =
-              true;
+            mesh.material = material;
+            mesh.material.needsUpdate = true;
 
           }
 
@@ -319,32 +207,10 @@
 
         applyMaterial();
 
-
         this.el.addEventListener(
-
           "object3dset",
-
           applyMaterial
-
         );
-
-      },
-
-
-      remove: function () {
-
-        if(this.texture) {
-
-          this.texture.dispose();
-
-        }
-
-
-        if(this.material) {
-
-          this.material.dispose();
-
-        }
 
       }
 
@@ -352,292 +218,213 @@
 
   </script>
 
-
 </head>
-
-
 
 <body>
 
 
-<button id="soundButton">
-
-  Включить звук
-
-</button>
+  <button id="sound">
+    🔊 Включить звук
+  </button>
 
 
-
-<div id="hint">
-
-  Наведите камеру на карточку
-
-</div>
+  <div id="hint">
+    Разрешите камеру
+  </div>
 
 
+  <a-scene
 
-<a-scene
-
-  mindar-image="
-    imageTargetSrc: ./assets/target.mind;
-    autoStart: true;
-  "
-
-  color-space="sRGB"
-
-  renderer="
-    colorManagement: true;
-    alpha: true;
-  "
-
-  vr-mode-ui="enabled: false"
-
-  device-orientation-permission-ui="enabled: false"
-
->
-
-
-  <a-assets timeout="30000">
-
-
-    <video
-
-      id="personVideo"
-
-      src="./assets/person_alpha.webm"
-
-      preload="auto"
-
-      playsinline
-
-      webkit-playsinline
-
-      crossorigin="anonymous"
-
-      loop
-
-    ></video>
-
-
-  </a-assets>
-
-
-
-  <!-- CAMERA -->
-
-
-  <a-camera
-
-    position="0 0 0"
-
-    look-controls="enabled: false"
-
-  ></a-camera>
-
-
-
-  <!-- TARGET -->
-
-
-  <a-entity
-
-    id="target"
-
-    mindar-image-target="
-      targetIndex: 0
+    mindar-image="
+      imageTargetSrc: ./assets/target.mind;
+      autoStart: true;
     "
+
+    renderer="
+      colorManagement: true;
+      alpha: true;
+    "
+
+    color-space="sRGB"
+
+    vr-mode-ui="enabled: false"
+
+    device-orientation-permission-ui="enabled: false"
+
+    loading-screen="enabled: true"
 
   >
 
 
+    <a-assets>
 
-    <!-- ЧЕЛОВЕК -->
+      <video
+        id="personVideo"
+        src="./assets/person_alpha.webm"
+        preload="auto"
+        playsinline
+        webkit-playsinline
+        crossorigin="anonymous"
+        loop
+        muted
+      ></video>
 
-
-    <a-plane
-
-      id="person"
-
-      width="0.65"
-
-      height="1.155"
-
-      position="0 0.577 0"
-
-      alpha-video="
-        src: #personVideo
-      "
-
-    ></a-plane>
+    </a-assets>
 
 
-
-  </a-entity>
-
-
-</a-scene>
-
+    <a-camera
+      position="0 0 0"
+      look-controls="enabled: false"
+    ></a-camera>
 
 
-<script>
+    <a-entity
+      id="target"
+      mindar-image-target="targetIndex: 0"
+    >
+
+      <a-plane
+        id="person"
+        width="0.65"
+        height="1.15"
+        position="0 0.575 0"
+        transparent-video="src: #personVideo"
+      ></a-plane>
+
+    </a-entity>
 
 
-  const video =
-    document.querySelector(
-      "#personVideo"
+  </a-scene>
+
+
+  <script>
+
+    const video =
+      document.querySelector("#personVideo");
+
+    const target =
+      document.querySelector("#target");
+
+    const hint =
+      document.querySelector("#hint");
+
+    const sound =
+      document.querySelector("#sound");
+
+    const scene =
+      document.querySelector("a-scene");
+
+
+    /*
+    Камера успешно запущена
+    */
+
+    scene.addEventListener(
+      "arReady",
+      () => {
+
+        hint.innerText =
+          "Наведите камеру на карточку";
+
+      }
     );
 
 
-  const target =
-    document.querySelector(
-      "#target"
+    /*
+    Ошибка камеры
+    */
+
+    scene.addEventListener(
+      "arError",
+      () => {
+
+        hint.innerText =
+          "Не удалось получить доступ к камере";
+
+      }
     );
 
 
-  const hint =
-    document.querySelector(
-      "#hint"
+    /*
+    Разблокировка звука
+    */
+
+    sound.addEventListener(
+      "click",
+      async () => {
+
+        try {
+
+          video.muted = false;
+
+          await video.play();
+
+          video.pause();
+
+          video.currentTime = 0;
+
+          sound.style.display =
+            "none";
+
+        }
+
+        catch (e) {
+
+          console.log(e);
+
+        }
+
+      }
     );
 
 
-  const soundButton =
-    document.querySelector(
-      "#soundButton"
-    );
+    /*
+    Нашли карточку
+    */
 
+    target.addEventListener(
+      "targetFound",
+      async () => {
 
-
-  /*
-  ========================================
-  ЗВУК
-  ========================================
-  */
-
-
-  soundButton.addEventListener(
-
-    "click",
-
-    async () => {
-
-
-      try {
-
-
-        video.muted = false;
-
-
-        await video.play();
-
-
-        video.pause();
-
+        hint.innerText =
+          "Карточка найдена";
 
         video.currentTime = 0;
 
+        try {
 
-        soundButton.style.display =
-          "none";
+          await video.play();
 
+        }
 
-      } catch(error) {
+        catch (e) {
 
+          console.log(e);
 
-        console.log(
-
-          "Ошибка звука",
-
-          error
-
-        );
-
+        }
 
       }
+    );
 
 
-    }
+    /*
+    Потеряли карточку
+    */
 
-  );
+    target.addEventListener(
+      "targetLost",
+      () => {
 
+        video.pause();
 
-
-  /*
-  ========================================
-  TARGET FOUND
-  ========================================
-  */
-
-
-  target.addEventListener(
-
-    "targetFound",
-
-    async () => {
-
-
-      hint.innerText =
-        "Карточка найдена";
-
-
-      video.currentTime = 0;
-
-
-      try {
-
-
-        await video.play();
-
-
-      } catch(error) {
-
-
-        console.log(
-
-          "Ошибка видео",
-
-          error
-
-        );
-
+        hint.innerText =
+          "Наведите камеру на карточку";
 
       }
+    );
 
-
-    }
-
-  );
-
-
-
-  /*
-  ========================================
-  TARGET LOST
-  ========================================
-  */
-
-
-  target.addEventListener(
-
-    "targetLost",
-
-    () => {
-
-
-      hint.innerText =
-        "Наведите камеру на карточку";
-
-
-      video.pause();
-
-
-    }
-
-  );
-
-
-</script>
+  </script>
 
 
 </body>
-
 </html>
