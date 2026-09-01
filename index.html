@@ -3,114 +3,340 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-  <title>WebAR — видео на карточке</title>
+
+  <title>AR — Рогозин Дмитрий</title>
 
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
-    html,body { margin:0; width:100%; height:100%; overflow:hidden; font-family:Arial,sans-serif; background:#000; }
-    #start {
-      position:fixed; inset:0; z-index:20; display:flex; align-items:center; justify-content:center;
-      background:rgba(0,0,0,.78); color:#fff; padding:24px;
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background: #000;
     }
-    #panel { max-width:430px; text-align:center; }
-    #panel h1 { font-size:24px; margin:0 0 12px; }
-    #panel p { font-size:16px; line-height:1.45; opacity:.85; }
-    #go {
-      border:0; border-radius:16px; padding:16px 24px; font-size:17px; font-weight:700;
-      cursor:pointer; margin-top:12px;
+
+    #start-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #111;
+      color: white;
+      padding: 24px;
+      box-sizing: border-box;
     }
-    #hint {
-      position:fixed; left:16px; right:16px; bottom:20px; z-index:10;
-      color:#fff; text-align:center; font-size:14px; background:rgba(0,0,0,.45);
-      padding:10px 14px; border-radius:14px; pointer-events:none;
+
+    #panel {
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+    }
+
+    #panel h1 {
+      font-size: 28px;
+      margin: 0 0 14px;
+    }
+
+    #panel p {
+      font-size: 16px;
+      line-height: 1.5;
+      opacity: 0.8;
+      margin-bottom: 24px;
+    }
+
+    #start-button {
+      width: 100%;
+      border: 0;
+      border-radius: 16px;
+      padding: 17px 20px;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+      background: white;
+      color: black;
+    }
+
+    #status {
+      position: fixed;
+      z-index: 50;
+      left: 16px;
+      right: 16px;
+      bottom: 20px;
+      text-align: center;
+      color: white;
+      background: rgba(0,0,0,0.55);
+      padding: 12px 16px;
+      border-radius: 14px;
+      font-size: 14px;
+      display: none;
+    }
+
+    #error {
+      margin-top: 18px;
+      font-size: 14px;
+      line-height: 1.4;
+      color: #ffb4b4;
+      display: none;
     }
   </style>
-
-  <script>
-    AFRAME.registerComponent('ar-video-control', {
-      init: function () {
-        const target = this.el;
-        const video = document.querySelector('#personVideo');
-
-        target.addEventListener('targetFound', () => {
-          document.querySelector('#hint').textContent = 'Готово — AR найден';
-          video.play().catch(()=>{});
-        });
-
-        target.addEventListener('targetLost', () => {
-          document.querySelector('#hint').textContent = 'Наведите камеру на карточку';
-          video.pause();
-        });
-      }
-    });
-
-    window.addEventListener('DOMContentLoaded', () => {
-      const start = document.querySelector('#start');
-      const go = document.querySelector('#go');
-      const video = document.querySelector('#personVideo');
-
-      go.addEventListener('click', async () => {
-        try {
-          video.muted = false;
-          await video.play();
-          video.pause();
-          video.currentTime = 0;
-        } catch(e) {}
-        start.style.display = 'none';
-      });
-    });
-  </script>
 </head>
 
 <body>
-  <div id="start">
+
+  <div id="start-screen">
     <div id="panel">
+
       <h1>Дополненная реальность</h1>
-      <p>Нажмите кнопку, разрешите доступ к камере и наведите телефон на карточку.</p>
-      <button id="go">Открыть AR</button>
+
+      <p>
+        Нажмите кнопку, разрешите доступ к камере
+        и наведите телефон на карточку.
+      </p>
+
+      <button id="start-button">
+        Открыть AR
+      </button>
+
+      <div id="error"></div>
+
     </div>
   </div>
 
-  <div id="hint">Наведите камеру на карточку</div>
+  <div id="status">
+    Запускаем камеру…
+  </div>
+
 
   <a-scene
-    mindar-image="imageTargetSrc: assets/target.mind; autoStart: true;"
+    mindar-image="
+      imageTargetSrc: assets/target.mind;
+      autoStart: false;
+    "
     color-space="sRGB"
     renderer="colorManagement: true; alpha: true;"
-    vr-mode-ui="enabled:false"
-    device-orientation-permission-ui="enabled:false"
-    embedded>
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false"
+    loading-screen="enabled: false"
+    embedded
+  >
 
-    <a-assets timeout="20000">
-      <!-- Заменить на ваше видео с прозрачностью -->
-      <video id="personVideo"
-             src="assets/person.webm"
-             preload="auto"
-             loop
-             playsinline
-             webkit-playsinline
-             crossorigin="anonymous"></video>
+    <a-assets timeout="30000">
+
+      <video
+        id="personVideo"
+        src="assets/person.webm"
+        preload="auto"
+        playsinline
+        webkit-playsinline
+        crossorigin="anonymous"
+      ></video>
+
     </a-assets>
 
-    <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
 
-    <a-entity mindar-image-target="targetIndex: 0" ar-video-control>
-      <!--
-        Плоскость стоит вертикально относительно распечатанной карточки.
-        height/width подгоняются под пропорции видео.
-        position Y задаёт, насколько фигура поднята над карточкой.
-      -->
+    <a-camera
+      position="0 0 0"
+      look-controls="enabled: false">
+    </a-camera>
+
+
+    <a-entity
+      id="target"
+      mindar-image-target="targetIndex: 0"
+    >
+
       <a-video
+        id="arVideo"
         src="#personVideo"
         width="0.62"
         height="1.10"
         position="0 0.55 0"
-        rotation="90 0 0"
-        material="transparent:true; alphaTest:0.05; side:double;">
+        material="
+          transparent: true;
+          alphaTest: 0.05;
+          side: double;
+        ">
       </a-video>
+
     </a-entity>
+
   </a-scene>
+
+
+  <script>
+
+    window.addEventListener("DOMContentLoaded", () => {
+
+      const scene = document.querySelector("a-scene");
+      const startButton = document.querySelector("#start-button");
+      const startScreen = document.querySelector("#start-screen");
+      const status = document.querySelector("#status");
+      const errorBox = document.querySelector("#error");
+
+      const target = document.querySelector("#target");
+      const video = document.querySelector("#personVideo");
+
+
+      /*
+        Когда MindAR полностью запустился
+      */
+
+      scene.addEventListener("arReady", () => {
+
+        status.style.display = "block";
+        status.textContent = "Наведите камеру на карточку";
+
+      });
+
+
+      /*
+        Если MindAR не смог запуститься
+      */
+
+      scene.addEventListener("arError", () => {
+
+        errorBox.style.display = "block";
+        errorBox.textContent =
+          "Не удалось запустить AR. Проверьте разрешение камеры и обновите страницу.";
+
+        startScreen.style.display = "flex";
+        status.style.display = "none";
+
+      });
+
+
+      /*
+        Карточка найдена
+      */
+
+      target.addEventListener("targetFound", async () => {
+
+        status.textContent = "Карточка найдена";
+
+        try {
+
+          video.currentTime = 0;
+          video.muted = false;
+
+          await video.play();
+
+        } catch (e) {
+
+          console.log("Ошибка запуска видео:", e);
+
+        }
+
+      });
+
+
+      /*
+        Карточка потеряна
+      */
+
+      target.addEventListener("targetLost", () => {
+
+        status.textContent = "Наведите камеру на карточку";
+
+        video.pause();
+
+      });
+
+
+      /*
+        Нажатие кнопки Открыть AR
+      */
+
+      startButton.addEventListener("click", async () => {
+
+        errorBox.style.display = "none";
+
+        startButton.disabled = true;
+        startButton.textContent = "Запускаем…";
+
+
+        /*
+          Разблокируем воспроизведение звука
+          через действие пользователя
+        */
+
+        try {
+
+          video.muted = true;
+
+          await video.play();
+
+          video.pause();
+
+          video.currentTime = 0;
+
+          video.muted = false;
+
+        } catch (e) {
+
+          console.log("Media unlock:", e);
+
+        }
+
+
+        try {
+
+          status.style.display = "block";
+          status.textContent = "Запускаем камеру…";
+
+          /*
+            Получаем систему MindAR
+          */
+
+          const arSystem =
+            scene.systems["mindar-image-system"];
+
+
+          /*
+            Ручной запуск камеры
+          */
+
+          await arSystem.start();
+
+
+          /*
+            Только после запуска
+            убираем стартовый экран
+          */
+
+          startScreen.style.display = "none";
+
+          status.textContent =
+            "Наведите камеру на карточку";
+
+
+        } catch (e) {
+
+          console.error(e);
+
+          errorBox.style.display = "block";
+
+          errorBox.textContent =
+            "Камера не запустилась. Нажмите «Разрешить» доступ к камере и попробуйте ещё раз.";
+
+          startButton.disabled = false;
+          startButton.textContent = "Попробовать снова";
+
+          status.style.display = "none";
+
+        }
+
+      });
+
+    });
+
+  </script>
+
 </body>
 </html>
