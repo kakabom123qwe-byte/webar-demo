@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+  <title>WebAR — видео на карточке</title>
+
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+  <style>
+    html,body { margin:0; width:100%; height:100%; overflow:hidden; font-family:Arial,sans-serif; background:#000; }
+    #start {
+      position:fixed; inset:0; z-index:20; display:flex; align-items:center; justify-content:center;
+      background:rgba(0,0,0,.78); color:#fff; padding:24px;
+    }
+    #panel { max-width:430px; text-align:center; }
+    #panel h1 { font-size:24px; margin:0 0 12px; }
+    #panel p { font-size:16px; line-height:1.45; opacity:.85; }
+    #go {
+      border:0; border-radius:16px; padding:16px 24px; font-size:17px; font-weight:700;
+      cursor:pointer; margin-top:12px;
+    }
+    #hint {
+      position:fixed; left:16px; right:16px; bottom:20px; z-index:10;
+      color:#fff; text-align:center; font-size:14px; background:rgba(0,0,0,.45);
+      padding:10px 14px; border-radius:14px; pointer-events:none;
+    }
+  </style>
+
+  <script>
+    AFRAME.registerComponent('ar-video-control', {
+      init: function () {
+        const target = this.el;
+        const video = document.querySelector('#personVideo');
+
+        target.addEventListener('targetFound', () => {
+          document.querySelector('#hint').textContent = 'Готово — AR найден';
+          video.play().catch(()=>{});
+        });
+
+        target.addEventListener('targetLost', () => {
+          document.querySelector('#hint').textContent = 'Наведите камеру на карточку';
+          video.pause();
+        });
+      }
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const start = document.querySelector('#start');
+      const go = document.querySelector('#go');
+      const video = document.querySelector('#personVideo');
+
+      go.addEventListener('click', async () => {
+        try {
+          video.muted = false;
+          await video.play();
+          video.pause();
+          video.currentTime = 0;
+        } catch(e) {}
+        start.style.display = 'none';
+      });
+    });
+  </script>
+</head>
+
+<body>
+  <div id="start">
+    <div id="panel">
+      <h1>Дополненная реальность</h1>
+      <p>Нажмите кнопку, разрешите доступ к камере и наведите телефон на карточку.</p>
+      <button id="go">Открыть AR</button>
+    </div>
+  </div>
+
+  <div id="hint">Наведите камеру на карточку</div>
+
+  <a-scene
+    mindar-image="imageTargetSrc: assets/target.mind; autoStart: true;"
+    color-space="sRGB"
+    renderer="colorManagement: true; alpha: true;"
+    vr-mode-ui="enabled:false"
+    device-orientation-permission-ui="enabled:false"
+    embedded>
+
+    <a-assets timeout="20000">
+      <!-- Заменить на ваше видео с прозрачностью -->
+      <video id="personVideo"
+             src="assets/person.webm"
+             preload="auto"
+             loop
+             playsinline
+             webkit-playsinline
+             crossorigin="anonymous"></video>
+    </a-assets>
+
+    <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+
+    <a-entity mindar-image-target="targetIndex: 0" ar-video-control>
+      <!--
+        Плоскость стоит вертикально относительно распечатанной карточки.
+        height/width подгоняются под пропорции видео.
+        position Y задаёт, насколько фигура поднята над карточкой.
+      -->
+      <a-video
+        src="#personVideo"
+        width="0.62"
+        height="1.10"
+        position="0 0.55 0"
+        rotation="90 0 0"
+        material="transparent:true; alphaTest:0.05; side:double;">
+      </a-video>
+    </a-entity>
+  </a-scene>
+</body>
+</html>
