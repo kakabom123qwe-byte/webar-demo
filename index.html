@@ -2,291 +2,137 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, user-scalable=no"
-  >
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>AR — Рогозин Дмитрий</title>
 
-  <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
-
-  <!-- MindAR -->
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
-    html,
-    body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: #000;
-      font-family: Arial, sans-serif;
-    }
-
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: Arial, sans-serif; }
     #hint {
-      position: fixed;
-      z-index: 1000;
-      left: 50%;
-      bottom: 24px;
-      transform: translateX(-50%);
-
-      padding: 12px 18px;
-      border-radius: 14px;
-
-      background: rgba(0, 0, 0, 0.65);
-      color: white;
-
-      font-size: 14px;
-      text-align: center;
-
-      pointer-events: none;
+      position: fixed; z-index: 1000; left: 50%; bottom: 24px; transform: translateX(-50%);
+      padding: 12px 18px; border-radius: 14px; background: rgba(0,0,0,.65); color: #fff;
+      font-size: 14px; text-align: center; pointer-events: none;
     }
-
     #soundButton {
-      position: fixed;
-      z-index: 1100;
-
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-
-      border: none;
-      border-radius: 14px;
-
-      padding: 12px 18px;
-
-      background: white;
-      color: black;
-
-      font-size: 14px;
-      font-weight: 600;
-
-      cursor: pointer;
+      position: fixed; z-index: 1100; top: 20px; left: 50%; transform: translateX(-50%);
+      border: 0; border-radius: 14px; padding: 12px 18px; background: #fff; color: #000;
+      font-size: 14px; font-weight: 600; cursor: pointer;
     }
   </style>
-</head>
-
-<body>
-
-  <!-- Кнопка нужна для разблокировки звука на телефоне -->
-  <button id="soundButton">
-    Включить звук
-  </button>
-
-  <div id="hint">
-    Наведите камеру на карточку
-  </div>
-
-
-  <a-scene
-    mindar-image="
-      imageTargetSrc: ./assets/target.mind;
-      autoStart: true;
-    "
-
-    color-space="sRGB"
-
-    renderer="
-      colorManagement: true;
-      alpha: true;
-      physicallyCorrectLights: true;
-    "
-
-    vr-mode-ui="enabled: false"
-
-    device-orientation-permission-ui="enabled: false"
-
-    loading-screen="enabled: true"
-  >
-
-
-    <!-- ВИДЕО -->
-
-    <a-assets timeout="30000">
-
-      <video
-        id="personVideo"
-        src="./assets/person.webm"
-
-        preload="auto"
-
-        playsinline
-        webkit-playsinline
-
-        crossorigin="anonymous"
-
-        loop
-      ></video>
-
-    </a-assets>
-
-
-    <!-- КАМЕРА -->
-
-    <a-camera
-      position="0 0 0"
-      look-controls="enabled: false">
-    </a-camera>
-
-
-    <!-- AR TARGET -->
-
-    <a-entity
-      id="target"
-      mindar-image-target="targetIndex: 0"
-    >
-
-
-      <!-- ПРОЗРАЧНОЕ ВИДЕО -->
-
-      <a-video
-
-        id="arPerson"
-
-        src="#personVideo"
-
-        width="0.65"
-        height="1.15"
-
-        position="0 0.575 0"
-
-        rotation="0 0 0"
-
-        material="
-          shader: flat;
-          transparent: true;
-          alphaTest: 0.01;
-          opacity: 1;
-          side: double;
-          depthWrite: false;
-        "
-
-      ></a-video>
-
-
-    </a-entity>
-
-  </a-scene>
-
 
   <script>
+    AFRAME.registerShader('video-alpha-mask', {
+      schema: {
+        src: { type: 'map', is: 'uniform' }
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D src;
+        varying vec2 vUv;
+        void main() {
+          // Left half = RGB, right half = grayscale alpha mask.
+          vec2 rgbUV = vec2(vUv.x * 0.5, vUv.y);
+          vec2 alphaUV = vec2(0.5 + vUv.x * 0.5, vUv.y);
 
-    const target =
-      document.querySelector("#target");
+          vec4 rgb = texture2D(src, rgbUV);
+          float alpha = texture2D(src, alphaUV).r;
 
-    const video =
-      document.querySelector("#personVideo");
+          // Remove nearly invisible compression noise around the silhouette.
+          alpha = smoothstep(0.02, 0.98, alpha);
 
-    const hint =
-      document.querySelector("#hint");
-
-    const soundButton =
-      document.querySelector("#soundButton");
-
-
-    /*
-    ----------------------------------
-    РАЗБЛОКИРОВКА ЗВУКА
-    ----------------------------------
-    */
-
-    soundButton.addEventListener("click", async () => {
-
-      try {
-
-        video.muted = false;
-
-        await video.play();
-
-        video.pause();
-
-        video.currentTime = 0;
-
-        soundButton.style.display = "none";
-
-      } catch (error) {
-
-        console.log("Ошибка звука:", error);
-
-      }
-
+          if (alpha < 0.01) discard;
+          gl_FragColor = vec4(rgb.rgb, alpha);
+        }
+      `
     });
-
-
-    /*
-    ----------------------------------
-    КАРТОЧКА НАЙДЕНА
-    ----------------------------------
-    */
-
-    target.addEventListener("targetFound", async () => {
-
-      hint.innerText = "Карточка найдена";
-
-      video.currentTime = 0;
-
-      try {
-
-        await video.play();
-
-      } catch (error) {
-
-        console.log("Видео не запустилось:", error);
-
-      }
-
-    });
-
-
-    /*
-    ----------------------------------
-    КАРТОЧКА ПОТЕРЯНА
-    ----------------------------------
-    */
-
-    target.addEventListener("targetLost", () => {
-
-      hint.innerText =
-        "Наведите камеру на карточку";
-
-      video.pause();
-
-    });
-
-
-    /*
-    ----------------------------------
-    ОШИБКИ AR
-    ----------------------------------
-    */
-
-    const scene =
-      document.querySelector("a-scene");
-
-    scene.addEventListener("arReady", () => {
-
-      console.log("AR готов");
-
-      hint.innerText =
-        "Наведите камеру на карточку";
-
-    });
-
-
-    scene.addEventListener("arError", (event) => {
-
-      console.error("AR ERROR:", event);
-
-      hint.innerText =
-        "Ошибка запуска камеры";
-
-    });
-
   </script>
+</head>
+<body>
+  <button id="soundButton">Включить звук</button>
+  <div id="hint">Наведите камеру на карточку</div>
 
+  <a-scene
+    mindar-image="imageTargetSrc: ./assets/target.mind; autoStart: true;"
+    color-space="sRGB"
+    renderer="colorManagement: true; alpha: true; physicallyCorrectLights: true;"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false">
+
+    <a-assets timeout="30000">
+      <video
+        id="personVideo"
+        src="./assets/person_alpha.webm"
+        preload="auto"
+        playsinline
+        webkit-playsinline
+        crossorigin="anonymous"
+        loop>
+      </video>
+    </a-assets>
+
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+    <a-entity id="target" mindar-image-target="targetIndex: 0">
+      <a-plane
+        id="arPerson"
+        width="0.65"
+        height="1.15"
+        position="0 0.575 0"
+        material="shader: video-alpha-mask; src: #personVideo; transparent: true; side: double; depthWrite: false;">
+      </a-plane>
+    </a-entity>
+  </a-scene>
+
+  <script>
+    const target = document.querySelector('#target');
+    const video = document.querySelector('#personVideo');
+    const hint = document.querySelector('#hint');
+    const soundButton = document.querySelector('#soundButton');
+    const scene = document.querySelector('a-scene');
+
+    soundButton.addEventListener('click', async () => {
+      try {
+        video.muted = false;
+        await video.play();
+        video.pause();
+        video.currentTime = 0;
+        soundButton.style.display = 'none';
+      } catch (e) {
+        console.log('Ошибка разблокировки звука:', e);
+      }
+    });
+
+    target.addEventListener('targetFound', async () => {
+      hint.textContent = 'Карточка найдена';
+      video.currentTime = 0;
+      try {
+        await video.play();
+      } catch (e) {
+        console.log('Видео не запустилось:', e);
+      }
+    });
+
+    target.addEventListener('targetLost', () => {
+      hint.textContent = 'Наведите камеру на карточку';
+      video.pause();
+    });
+
+    scene.addEventListener('arReady', () => {
+      hint.textContent = 'Наведите камеру на карточку';
+    });
+
+    scene.addEventListener('arError', (e) => {
+      console.error('AR ERROR:', e);
+      hint.textContent = 'Ошибка запуска камеры';
+    });
+  </script>
 </body>
 </html>
