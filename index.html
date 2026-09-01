@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
   <meta charset="UTF-8">
 
@@ -10,86 +10,283 @@
 
   <title>AR — Рогозин Дмитрий</title>
 
+  <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
 
+  <!-- MindAR -->
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
+    html,
     body {
       margin: 0;
+      width: 100%;
+      height: 100%;
       overflow: hidden;
+      background: #000;
+      font-family: Arial, sans-serif;
+    }
+
+    #hint {
+      position: fixed;
+      z-index: 1000;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%);
+
+      padding: 12px 18px;
+      border-radius: 14px;
+
+      background: rgba(0, 0, 0, 0.65);
+      color: white;
+
+      font-size: 14px;
+      text-align: center;
+
+      pointer-events: none;
+    }
+
+    #soundButton {
+      position: fixed;
+      z-index: 1100;
+
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+
+      border: none;
+      border-radius: 14px;
+
+      padding: 12px 18px;
+
+      background: white;
+      color: black;
+
+      font-size: 14px;
+      font-weight: 600;
+
+      cursor: pointer;
     }
   </style>
 </head>
 
 <body>
 
-<a-scene
-  mindar-image="
-    imageTargetSrc: ./assets/target.mind;
-  "
-  color-space="sRGB"
-  renderer="colorManagement: true, physicallyCorrectLights"
-  vr-mode-ui="enabled: false"
-  device-orientation-permission-ui="enabled: false"
->
+  <!-- Кнопка нужна для разблокировки звука на телефоне -->
+  <button id="soundButton">
+    Включить звук
+  </button>
 
-  <a-assets>
-
-    <video
-      id="personVideo"
-      src="./assets/person.webm"
-      preload="auto"
-      playsinline
-      webkit-playsinline
-      loop
-      muted
-    ></video>
-
-  </a-assets>
+  <div id="hint">
+    Наведите камеру на карточку
+  </div>
 
 
-  <a-camera
-    position="0 0 0"
-    look-controls="enabled: false">
-  </a-camera>
+  <a-scene
+    mindar-image="
+      imageTargetSrc: ./assets/target.mind;
+      autoStart: true;
+    "
 
+    color-space="sRGB"
 
-  <a-entity
-    id="target"
-    mindar-image-target="targetIndex: 0"
+    renderer="
+      colorManagement: true;
+      alpha: true;
+      physicallyCorrectLights: true;
+    "
+
+    vr-mode-ui="enabled: false"
+
+    device-orientation-permission-ui="enabled: false"
+
+    loading-screen="enabled: true"
   >
 
-    <a-video
-      src="#personVideo"
-      width="0.65"
-      height="1.15"
-      position="0 0.55 0"
-    ></a-video>
 
-  </a-entity>
+    <!-- ВИДЕО -->
 
-</a-scene>
+    <a-assets timeout="30000">
+
+      <video
+        id="personVideo"
+        src="./assets/person.webm"
+
+        preload="auto"
+
+        playsinline
+        webkit-playsinline
+
+        crossorigin="anonymous"
+
+        loop
+      ></video>
+
+    </a-assets>
 
 
-<script>
+    <!-- КАМЕРА -->
 
-const target = document.querySelector("#target");
-const video = document.querySelector("#personVideo");
+    <a-camera
+      position="0 0 0"
+      look-controls="enabled: false">
+    </a-camera>
 
-target.addEventListener("targetFound", () => {
 
-  video.play();
+    <!-- AR TARGET -->
 
-});
+    <a-entity
+      id="target"
+      mindar-image-target="targetIndex: 0"
+    >
 
-target.addEventListener("targetLost", () => {
 
-  video.pause();
+      <!-- ПРОЗРАЧНОЕ ВИДЕО -->
 
-});
+      <a-video
 
-</script>
+        id="arPerson"
+
+        src="#personVideo"
+
+        width="0.65"
+        height="1.15"
+
+        position="0 0.575 0"
+
+        rotation="0 0 0"
+
+        material="
+          shader: flat;
+          transparent: true;
+          alphaTest: 0.01;
+          opacity: 1;
+          side: double;
+          depthWrite: false;
+        "
+
+      ></a-video>
+
+
+    </a-entity>
+
+  </a-scene>
+
+
+  <script>
+
+    const target =
+      document.querySelector("#target");
+
+    const video =
+      document.querySelector("#personVideo");
+
+    const hint =
+      document.querySelector("#hint");
+
+    const soundButton =
+      document.querySelector("#soundButton");
+
+
+    /*
+    ----------------------------------
+    РАЗБЛОКИРОВКА ЗВУКА
+    ----------------------------------
+    */
+
+    soundButton.addEventListener("click", async () => {
+
+      try {
+
+        video.muted = false;
+
+        await video.play();
+
+        video.pause();
+
+        video.currentTime = 0;
+
+        soundButton.style.display = "none";
+
+      } catch (error) {
+
+        console.log("Ошибка звука:", error);
+
+      }
+
+    });
+
+
+    /*
+    ----------------------------------
+    КАРТОЧКА НАЙДЕНА
+    ----------------------------------
+    */
+
+    target.addEventListener("targetFound", async () => {
+
+      hint.innerText = "Карточка найдена";
+
+      video.currentTime = 0;
+
+      try {
+
+        await video.play();
+
+      } catch (error) {
+
+        console.log("Видео не запустилось:", error);
+
+      }
+
+    });
+
+
+    /*
+    ----------------------------------
+    КАРТОЧКА ПОТЕРЯНА
+    ----------------------------------
+    */
+
+    target.addEventListener("targetLost", () => {
+
+      hint.innerText =
+        "Наведите камеру на карточку";
+
+      video.pause();
+
+    });
+
+
+    /*
+    ----------------------------------
+    ОШИБКИ AR
+    ----------------------------------
+    */
+
+    const scene =
+      document.querySelector("a-scene");
+
+    scene.addEventListener("arReady", () => {
+
+      console.log("AR готов");
+
+      hint.innerText =
+        "Наведите камеру на карточку";
+
+    });
+
+
+    scene.addEventListener("arError", (event) => {
+
+      console.error("AR ERROR:", event);
+
+      hint.innerText =
+        "Ошибка запуска камеры";
+
+    });
+
+  </script>
 
 </body>
 </html>
