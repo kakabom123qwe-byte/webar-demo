@@ -1,292 +1,1457 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
+
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
-  <meta name="apple-mobile-web-app-capable" content="yes">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover"
+  >
+
+  <meta
+    name="apple-mobile-web-app-capable"
+    content="yes"
+  >
+
   <title>AR — Дмитрий Рогозин</title>
 
+
+  <!-- =========================================
+       A-FRAME
+  ========================================== -->
+
   <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
+
+
+  <!-- =========================================
+       MIND AR
+  ========================================== -->
+
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
+
+
   <style>
-    html, body {
+
+    html,
+    body {
+
       margin: 0;
+
       width: 100%;
       height: 100%;
+
       overflow: hidden;
+
       background: transparent !important;
+
       font-family: Arial, sans-serif;
+
     }
+
+
+
+    /*
+    ==========================================
+    AR SCENE
+    ==========================================
+    */
 
     a-scene {
+
       position: fixed !important;
+
       inset: 0 !important;
+
       width: 100vw !important;
       height: 100vh !important;
+
       background: transparent !important;
+
       z-index: 2;
+
     }
+
+
 
     canvas.a-canvas {
+
       background: transparent !important;
+
     }
 
-    /* Видео камеры, которое создаёт MindAR */
+
+
+    /*
+    ==========================================
+    CAMERA VIDEO MINDAR
+    ==========================================
+    */
+
     body video:not(#personVideo) {
+
       position: fixed !important;
+
       inset: 0 !important;
+
       width: 100vw !important;
       height: 100vh !important;
+
       object-fit: cover !important;
+
       opacity: 1 !important;
+
       visibility: visible !important;
+
       z-index: 0 !important;
+
       pointer-events: none !important;
+
     }
 
-    /* Не прячем display:none — iOS может остановить видео */
+
+
+    /*
+    ==========================================
+    НАШЕ ВИДЕО С ЧЕЛОВЕКОМ
+    ==========================================
+    */
+
     #personVideo {
+
       position: fixed !important;
+
       left: -4px !important;
       top: -4px !important;
+
       width: 2px !important;
       height: 2px !important;
+
       opacity: 0.01 !important;
+
       pointer-events: none !important;
+
       z-index: -1 !important;
+
     }
+
+
+
+    /*
+    ==========================================
+    ПОДСКАЗКА
+    ==========================================
+    */
 
     #hint {
+
       position: fixed;
+
       z-index: 1000;
+
       left: 50%;
-      bottom: calc(22px + env(safe-area-inset-bottom));
-      transform: translateX(-50%);
-      padding: 11px 16px;
-      border-radius: 14px;
-      background: rgba(0,0,0,.55);
-      color: #fff;
-      font-size: 14px;
-      text-align: center;
-      white-space: nowrap;
-      pointer-events: none;
+
+      bottom:
+        calc(
+          22px +
+          env(safe-area-inset-bottom)
+        );
+
+      transform:
+        translateX(-50%);
+
+      padding:
+        11px 16px;
+
+      border-radius:
+        14px;
+
+      background:
+        rgba(0,0,0,.55);
+
+      color:
+        white;
+
+      font-size:
+        14px;
+
+      text-align:
+        center;
+
+      white-space:
+        nowrap;
+
+      pointer-events:
+        none;
+
     }
+
+
+
+    /*
+    ==========================================
+    КНОПКА ЗВУКА
+    ==========================================
+    */
 
     #sound {
-      position: fixed;
-      z-index: 1100;
-      top: calc(16px + env(safe-area-inset-top));
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 12px 18px;
-      border: 0;
-      border-radius: 14px;
-      background: #fff;
-      color: #000;
-      font-size: 15px;
-      font-weight: 700;
-      box-shadow: 0 4px 18px rgba(0,0,0,.18);
+
+      position:
+        fixed;
+
+      z-index:
+        1100;
+
+      top:
+        calc(
+          16px +
+          env(safe-area-inset-top)
+        );
+
+      left:
+        50%;
+
+      transform:
+        translateX(-50%);
+
+      padding:
+        12px 18px;
+
+      border:
+        none;
+
+      border-radius:
+        14px;
+
+      background:
+        white;
+
+      color:
+        black;
+
+      font-size:
+        15px;
+
+      font-weight:
+        700;
+
+      box-shadow:
+        0 4px 18px rgba(0,0,0,.18);
+
     }
+
+
+
+    /*
+    ==========================================
+    ПРЕДУПРЕЖДЕНИЕ ДЛЯ VK / TELEGRAM
+    ==========================================
+    */
 
     #browserWarning {
-      display: none;
-      position: fixed;
-      inset: 0;
-      z-index: 5000;
-      background: rgba(0,0,0,.92);
-      color: white;
-      padding: 28px;
-      box-sizing: border-box;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
+
+      display:
+        none;
+
+      position:
+        fixed;
+
+      inset:
+        0;
+
+      z-index:
+        5000;
+
+      background:
+        rgba(0,0,0,.92);
+
+      color:
+        white;
+
+      padding:
+        28px;
+
+      box-sizing:
+        border-box;
+
+      align-items:
+        center;
+
+      justify-content:
+        center;
+
+      text-align:
+        center;
+
     }
+
 
     #browserWarning .box {
-      max-width: 380px;
+
+      max-width:
+        380px;
+
     }
+
 
     #browserWarning h2 {
-      margin: 0 0 12px;
-      font-size: 24px;
+
+      margin:
+        0 0 12px;
+
+      font-size:
+        24px;
+
     }
+
 
     #browserWarning p {
-      margin: 0;
-      line-height: 1.45;
-      opacity: .85;
-      font-size: 16px;
+
+      margin:
+        0;
+
+      line-height:
+        1.45;
+
+      opacity:
+        .85;
+
+      font-size:
+        16px;
+
     }
+
   </style>
 
+
+
   <script>
-    AFRAME.registerComponent("alpha-video", {
-      schema: { src: { type: "selector" } },
 
-      init: function () {
-        const video = this.data.src;
-        const texture = new THREE.VideoTexture(video);
+    /*
+    =====================================================
+    ПРОЗРАЧНОЕ ВИДЕО
 
-        texture.minFilter = THREE.LinearFilter;
-        texture.magFilter = THREE.LinearFilter;
-        texture.generateMipmaps = false;
+    person_alpha.webm:
 
-        const material = new THREE.ShaderMaterial({
-          uniforms: {
-            map: { value: texture }
-          },
+    ЛЕВАЯ ПОЛОВИНА  = RGB
+    ПРАВАЯ ПОЛОВИНА = ALPHA MASK
+    =====================================================
+    */
 
-          vertexShader: `
-            varying vec2 vUv;
-            void main() {
-              vUv = uv;
-              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            }
-          `,
 
-          fragmentShader: `
-            precision mediump float;
-            uniform sampler2D map;
-            varying vec2 vUv;
+    AFRAME.registerComponent(
+      "alpha-video",
+      {
 
-            void main() {
-              // person_alpha.webm:
-              // левая половина = RGB, правая = grayscale alpha-mask
-              vec2 rgbUV  = vec2(vUv.x * 0.5, vUv.y);
-              vec2 maskUV = vec2(0.5 + vUv.x * 0.5, vUv.y);
+        schema: {
 
-              vec4 rgb = texture2D(map, rgbUV);
-              float mask = texture2D(map, maskUV).r;
+          src: {
+            type: "selector"
+          }
 
-              float alpha = smoothstep(0.10, 0.58, mask);
+        },
 
-              if (alpha < 0.02) discard;
 
-              gl_FragColor = vec4(rgb.rgb, alpha);
-            }
-          `,
+        init: function () {
 
-          transparent: true,
-          depthWrite: false,
-          depthTest: true,
-          side: THREE.DoubleSide
-        });
 
-        const apply = () => {
-          const mesh = this.el.getObject3D("mesh");
-          if (!mesh) return;
-          mesh.material = material;
-          mesh.material.needsUpdate = true;
-        };
+          const video =
+            this.data.src;
 
-        apply();
-        this.el.addEventListener("object3dset", apply);
+
+
+          /*
+          Создаём видеотекстуру
+          */
+
+
+          const texture =
+            new THREE.VideoTexture(
+              video
+            );
+
+
+          texture.minFilter =
+            THREE.LinearFilter;
+
+
+          texture.magFilter =
+            THREE.LinearFilter;
+
+
+          texture.generateMipmaps =
+            false;
+
+
+
+          /*
+          Создаём ShaderMaterial
+          */
+
+
+          const material =
+            new THREE.ShaderMaterial({
+
+              uniforms: {
+
+                map: {
+                  value: texture
+                }
+
+              },
+
+
+              vertexShader: `
+
+                varying vec2 vUv;
+
+
+                void main() {
+
+                  vUv = uv;
+
+
+                  gl_Position =
+
+                    projectionMatrix *
+
+                    modelViewMatrix *
+
+                    vec4(
+                      position,
+                      1.0
+                    );
+
+                }
+
+              `,
+
+
+              fragmentShader: `
+
+                precision mediump float;
+
+
+                uniform sampler2D map;
+
+
+                varying vec2 vUv;
+
+
+
+                void main() {
+
+
+                  /*
+                  Левая половина видео
+                  */
+
+
+                  vec2 rgbUV =
+
+                    vec2(
+
+                      vUv.x * 0.5,
+
+                      vUv.y
+
+                    );
+
+
+
+                  /*
+                  Правая половина —
+                  маска прозрачности
+                  */
+
+
+                  vec2 maskUV =
+
+                    vec2(
+
+                      0.5 +
+
+                      vUv.x * 0.5,
+
+                      vUv.y
+
+                    );
+
+
+
+                  vec4 rgb =
+
+                    texture2D(
+
+                      map,
+
+                      rgbUV
+
+                    );
+
+
+
+                  float mask =
+
+                    texture2D(
+
+                      map,
+
+                      maskUV
+
+                    ).r;
+
+
+
+                  /*
+                  Формируем прозрачность
+                  */
+
+
+                  float alpha =
+
+                    smoothstep(
+
+                      0.10,
+
+                      0.58,
+
+                      mask
+
+                    );
+
+
+
+                  /*
+                  Полностью удаляем фон
+                  */
+
+
+                  if (
+
+                    alpha < 0.02
+
+                  ) {
+
+                    discard;
+
+                  }
+
+
+
+                  gl_FragColor =
+
+                    vec4(
+
+                      rgb.rgb,
+
+                      alpha
+
+                    );
+
+                }
+
+              `,
+
+
+              transparent:
+                true,
+
+
+              depthWrite:
+                false,
+
+
+              depthTest:
+                true,
+
+
+              side:
+                THREE.DoubleSide
+
+            });
+
+
+
+          /*
+          Применяем материал
+          */
+
+
+          const applyMaterial =
+            () => {
+
+
+              const mesh =
+
+                this.el.getObject3D(
+                  "mesh"
+                );
+
+
+              if (!mesh) {
+
+                return;
+
+              }
+
+
+              mesh.material =
+                material;
+
+
+              mesh.material.needsUpdate =
+                true;
+
+            };
+
+
+          applyMaterial();
+
+
+          this.el.addEventListener(
+
+            "object3dset",
+
+            applyMaterial
+
+          );
+
+        }
+
       }
-    });
+
+    );
+
+
+
+
+
+    /*
+    =====================================================
+    BILLBOARD
+
+    ЗАДАЧА:
+
+    - ноги остаются на карточке;
+    - человек не ложится вместе с карточкой;
+    - человек остаётся вертикальным;
+    - человек разворачивается к камере.
+    =====================================================
+    */
+
+
+    AFRAME.registerComponent(
+      "person-billboard",
+      {
+
+
+        tick: function () {
+
+
+          const cameraEl =
+
+            document.querySelector(
+              "a-camera"
+            );
+
+
+          if (!cameraEl) {
+
+            return;
+
+          }
+
+
+
+          const object =
+
+            this.el.object3D;
+
+
+
+          const parent =
+
+            object.parent;
+
+
+
+          if (!parent) {
+
+            return;
+
+          }
+
+
+
+          /*
+          ---------------------------------------
+          Мировая позиция камеры
+          ---------------------------------------
+          */
+
+
+          const cameraPosition =
+
+            new THREE.Vector3();
+
+
+          cameraEl.object3D.getWorldPosition(
+
+            cameraPosition
+
+          );
+
+
+
+          /*
+          ---------------------------------------
+          Мировая позиция точки ног
+          ---------------------------------------
+          */
+
+
+          const personPosition =
+
+            new THREE.Vector3();
+
+
+          object.getWorldPosition(
+
+            personPosition
+
+          );
+
+
+
+          /*
+          ---------------------------------------
+          Определяем направление на камеру
+          ---------------------------------------
+          */
+
+
+          const direction =
+
+            new THREE.Vector3();
+
+
+          direction.subVectors(
+
+            cameraPosition,
+
+            personPosition
+
+          );
+
+
+
+          /*
+          ВАЖНО:
+
+          Убираем вертикальную составляющую.
+
+          Человек НЕ наклоняется
+          вверх / вниз.
+
+          Он остаётся вертикальным.
+          */
+
+
+          direction.y = 0;
+
+
+
+          if (
+
+            direction.lengthSq() < 0.000001
+
+          ) {
+
+            return;
+
+          }
+
+
+
+          direction.normalize();
+
+
+
+          /*
+          ---------------------------------------
+          Угол вокруг вертикальной оси
+          ---------------------------------------
+          */
+
+
+          const angle =
+
+            Math.atan2(
+
+              direction.x,
+
+              direction.z
+
+            );
+
+
+
+          /*
+          ---------------------------------------
+          Создаём мировой поворот
+          ---------------------------------------
+          */
+
+
+          const desiredWorldQuaternion =
+
+            new THREE.Quaternion();
+
+
+
+          desiredWorldQuaternion.setFromEuler(
+
+            new THREE.Euler(
+
+              0,
+
+              angle,
+
+              0,
+
+              "YXZ"
+
+            )
+
+          );
+
+
+
+          /*
+          ---------------------------------------
+          Компенсируем вращение target.mind
+
+          Благодаря этому карточка может:
+
+          - лежать;
+          - висеть;
+          - быть наклонена.
+
+          Человек старается оставаться
+          вертикальным.
+          ---------------------------------------
+          */
+
+
+          const parentWorldQuaternion =
+
+            new THREE.Quaternion();
+
+
+
+          parent.getWorldQuaternion(
+
+            parentWorldQuaternion
+
+          );
+
+
+
+          parentWorldQuaternion.invert();
+
+
+
+          const localQuaternion =
+
+            parentWorldQuaternion.multiply(
+
+              desiredWorldQuaternion
+
+            );
+
+
+
+          object.quaternion.copy(
+
+            localQuaternion
+
+          );
+
+        }
+
+      }
+
+    );
+
   </script>
+
 </head>
+
+
 
 <body>
 
+
+
+  <!-- =========================================
+       ВСТРОЕННЫЙ БРАУЗЕР
+  ========================================== -->
+
+
   <div id="browserWarning">
+
     <div class="box">
-      <h2>Откройте в Safari</h2>
+
+      <h2>
+        Откройте в Safari
+      </h2>
+
       <p>
-        Сейчас страница открыта во встроенном браузере приложения.
-        Для корректной AR-камеры откройте эту страницу в Safari.
+
+        Для корректной работы
+        дополненной реальности
+        откройте эту страницу
+        в Safari.
+
       </p>
+
     </div>
+
   </div>
 
-  <button id="sound">🔊 Включить звук</button>
-  <div id="hint">Разрешите доступ к камере</div>
+
+
+  <!-- =========================================
+       ЗВУК
+  ========================================== -->
+
+
+  <button id="sound">
+
+    🔊 Включить звук
+
+  </button>
+
+
+
+  <!-- =========================================
+       ПОДСКАЗКА
+  ========================================== -->
+
+
+  <div id="hint">
+
+    Разрешите доступ к камере
+
+  </div>
+
+
+
+
+
+  <!-- =========================================
+       AR SCENE
+  ========================================== -->
+
 
   <a-scene
-    mindar-image="imageTargetSrc: ./assets/target.mind; autoStart: true;"
+
+    mindar-image="
+      imageTargetSrc: ./assets/target.mind;
+      autoStart: true;
+    "
+
     color-space="sRGB"
-    renderer="colorManagement: true; alpha: true;"
-    vr-mode-ui="enabled: false"
-    device-orientation-permission-ui="enabled: false"
-    loading-screen="enabled: true"
+
+    renderer="
+      colorManagement: true;
+      alpha: true;
+    "
+
+    vr-mode-ui="
+      enabled: false
+    "
+
+    device-orientation-permission-ui="
+      enabled: false
+    "
+
+    loading-screen="
+      enabled: true
+    "
+
     embedded
+
   >
+
+
+
+    <!-- =====================================
+         ASSETS
+    ====================================== -->
+
+
     <a-assets timeout="30000">
+
+
       <video
+
         id="personVideo"
+
         src="./assets/person_alpha.webm"
+
         preload="auto"
+
         playsinline
+
         webkit-playsinline
+
         crossorigin="anonymous"
+
         loop
+
         muted
+
       ></video>
+
+
     </a-assets>
 
-    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <a-entity id="target" mindar-image-target="targetIndex: 0">
-      <a-plane
-        id="person"
-        width="0.65"
-        height="1.15"
-        position="0 0.575 0"
-        alpha-video="src: #personVideo"
-      ></a-plane>
+
+
+
+    <!-- =====================================
+         CAMERA
+    ====================================== -->
+
+
+    <a-camera
+
+      position="0 0 0"
+
+      look-controls="
+        enabled: false
+      "
+
+    ></a-camera>
+
+
+
+
+
+    <!-- =====================================
+         IMAGE TARGET
+    ====================================== -->
+
+
+    <a-entity
+
+      id="target"
+
+      mindar-image-target="
+        targetIndex: 0
+      "
+
+    >
+
+
+
+      <!--
+      =================================================
+
+      FEET ANCHOR
+
+      ЭТО ТОЧКА, ГДЕ СТОЯТ НОГИ.
+
+      Сейчас:
+
+      X = 0
+      Y = 0
+      Z = 0.02
+
+      То есть ноги находятся
+      примерно в центре AR-карточки.
+
+      ПОЗЖЕ МЫ СДВИНЕМ ЭТУ ТОЧКУ
+      ТОЧНО НА QR.
+
+      =================================================
+      -->
+
+
+      <a-entity
+
+        id="feetAnchor"
+
+        position="
+          0
+          0
+          0.02
+        "
+
+        person-billboard
+
+      >
+
+
+
+
+        <!--
+        ===============================================
+
+        ЧЕЛОВЕК
+
+        height = 1.15
+
+        Половина:
+
+        1.15 / 2 = 0.575
+
+        Поэтому центр видео поднят
+        на 0.575.
+
+        Нижняя граница видео
+        остаётся в точке feetAnchor.
+
+        ===============================================
+        -->
+
+
+        <a-plane
+
+          id="person"
+
+          width="
+            0.65
+          "
+
+          height="
+            1.15
+          "
+
+          position="
+            0
+            0.575
+            0
+          "
+
+          alpha-video="
+            src: #personVideo
+          "
+
+        ></a-plane>
+
+
+
+      </a-entity>
+
+
     </a-entity>
+
+
   </a-scene>
 
-  <script>
-    const scene = document.querySelector("a-scene");
-    const video = document.querySelector("#personVideo");
-    const target = document.querySelector("#target");
-    const hint = document.querySelector("#hint");
-    const sound = document.querySelector("#sound");
-    const warning = document.querySelector("#browserWarning");
 
-    // Встроенные браузеры соцсетей часто ломают WebAR-камеру на iPhone.
-    const ua = navigator.userAgent || "";
-    const inAppBrowser = /VK|Instagram|FBAN|FBAV|Telegram/i.test(ua);
+
+
+
+  <script>
+
+
+    /*
+    =================================================
+    ELEMENTS
+    =================================================
+    */
+
+
+    const scene =
+
+      document.querySelector(
+        "a-scene"
+      );
+
+
+
+    const video =
+
+      document.querySelector(
+        "#personVideo"
+      );
+
+
+
+    const target =
+
+      document.querySelector(
+        "#target"
+      );
+
+
+
+    const hint =
+
+      document.querySelector(
+        "#hint"
+      );
+
+
+
+    const sound =
+
+      document.querySelector(
+        "#sound"
+      );
+
+
+
+    const warning =
+
+      document.querySelector(
+        "#browserWarning"
+      );
+
+
+
+
+
+    /*
+    =================================================
+    ПРОВЕРКА ВСТРОЕННОГО БРАУЗЕРА
+    =================================================
+    */
+
+
+    const ua =
+
+      navigator.userAgent || "";
+
+
+
+    const inAppBrowser =
+
+      /VK|Instagram|FBAN|FBAV|Telegram/i.test(
+        ua
+      );
+
+
+
     if (inAppBrowser) {
-      warning.style.display = "flex";
+
+      warning.style.display =
+        "flex";
+
     }
 
-    scene.addEventListener("arReady", () => {
-      hint.textContent = "Наведите камеру на карточку";
-    });
 
-    scene.addEventListener("arError", () => {
-      hint.textContent = "Не удалось запустить камеру";
-    });
 
-    sound.addEventListener("click", async () => {
-      try {
-        video.muted = false;
-        await video.play();
+
+
+    /*
+    =================================================
+    AR READY
+    =================================================
+    */
+
+
+    scene.addEventListener(
+
+      "arReady",
+
+      () => {
+
+
+        hint.textContent =
+
+          "Наведите камеру на карточку";
+
+
+      }
+
+    );
+
+
+
+
+
+    /*
+    =================================================
+    AR ERROR
+    =================================================
+    */
+
+
+    scene.addEventListener(
+
+      "arError",
+
+      () => {
+
+
+        hint.textContent =
+
+          "Не удалось запустить камеру";
+
+
+      }
+
+    );
+
+
+
+
+
+    /*
+    =================================================
+    РАЗБЛОКИРОВКА ЗВУКА
+    =================================================
+    */
+
+
+    sound.addEventListener(
+
+      "click",
+
+      async () => {
+
+
+        try {
+
+
+          video.muted =
+            false;
+
+
+          await video.play();
+
+
+          video.pause();
+
+
+          video.currentTime =
+            0;
+
+
+          sound.style.display =
+            "none";
+
+
+        }
+
+
+        catch (error) {
+
+
+          console.log(
+
+            "Audio error:",
+
+            error
+
+          );
+
+
+        }
+
+
+      }
+
+    );
+
+
+
+
+
+    /*
+    =================================================
+    КАРТОЧКА НАЙДЕНА
+    =================================================
+    */
+
+
+    target.addEventListener(
+
+      "targetFound",
+
+      async () => {
+
+
+        hint.textContent =
+
+          "Карточка найдена";
+
+
+        video.currentTime =
+          0;
+
+
+
+        try {
+
+
+          await video.play();
+
+
+        }
+
+
+        catch (error) {
+
+
+          console.log(
+
+            "Video error:",
+
+            error
+
+          );
+
+
+        }
+
+
+      }
+
+    );
+
+
+
+
+
+    /*
+    =================================================
+    КАРТОЧКА ПОТЕРЯНА
+    =================================================
+    */
+
+
+    target.addEventListener(
+
+      "targetLost",
+
+      () => {
+
+
         video.pause();
-        video.currentTime = 0;
-        sound.style.display = "none";
-      } catch (e) {
-        console.log("Audio unlock error:", e);
+
+
+        hint.textContent =
+
+          "Наведите камеру на карточку";
+
+
       }
-    });
 
-    target.addEventListener("targetFound", async () => {
-      hint.textContent = "Карточка найдена";
-      video.currentTime = 0;
+    );
 
-      try {
-        await video.play();
-      } catch (e) {
-        console.log("Video play error:", e);
-      }
-    });
 
-    target.addEventListener("targetLost", () => {
-      video.pause();
-      hint.textContent = "Наведите камеру на карточку";
-    });
   </script>
+
+
 </body>
+
 </html>
