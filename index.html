@@ -117,7 +117,6 @@
       height: 100vh !important;
 
       background: transparent !important;
-
       z-index: 2;
     }
 
@@ -239,12 +238,9 @@
 
   <script>
     /*
-    ======================================================
+    ============================================
     ПРОЗРАЧНОЕ ВИДЕО
-    person_alpha.webm:
-    слева RGB
-    справа alpha-mask
-    ======================================================
+    ============================================
     */
 
     AFRAME.registerComponent("alpha-video", {
@@ -255,6 +251,7 @@
       },
 
       init: function () {
+
         const video = this.data.src;
 
         const texture =
@@ -271,6 +268,7 @@
 
         const material =
           new THREE.ShaderMaterial({
+
             uniforms: {
               map: {
                 value: texture
@@ -281,6 +279,7 @@
               varying vec2 vUv;
 
               void main() {
+
                 vUv = uv;
 
                 gl_Position =
@@ -345,15 +344,13 @@
             `,
 
             transparent: true,
-
             depthWrite: false,
-
             depthTest: true,
-
             side: THREE.DoubleSide
           });
 
         const applyMaterial = () => {
+
           const mesh =
             this.el.getObject3D("mesh");
 
@@ -378,18 +375,13 @@
     });
 
 
-
-
-
     /*
-    ======================================================
-    BILLBOARD ДЛЯ ЛЕЖАЩЕЙ КАРТОЧКИ
+    ============================================
+    BILLBOARD
 
-    Фигура:
-    - стоит вертикально;
-    - ногами на QR;
-    - поворачивается лицом к камере.
-    ======================================================
+    Держим фигуру вертикально
+    и разворачиваем лицом к камере
+    ============================================
     */
 
     AFRAME.registerComponent(
@@ -431,11 +423,6 @@
             anchorWorld
           );
 
-          /*
-          Используем ориентацию мира,
-          а не наклон карточки.
-          */
-
           const up =
             new THREE.Vector3(
               0,
@@ -450,14 +437,20 @@
             );
 
           /*
-          Фигура не заваливается
-          в сторону камеры.
+          Убираем вертикальную
+          составляющую.
+
+          Из-за этого фигура
+          остаётся вертикальной,
+          а не наклоняется
+          к телефону.
           */
 
           forward.y = 0;
 
           if (
-            forward.lengthSq() < 0.000001
+            forward.lengthSq() <
+            0.000001
           ) {
             return;
           }
@@ -492,9 +485,10 @@
           const desiredWorldQuaternion =
             new THREE.Quaternion();
 
-          desiredWorldQuaternion.setFromRotationMatrix(
-            matrix
-          );
+          desiredWorldQuaternion
+            .setFromRotationMatrix(
+              matrix
+            );
 
           const parentWorldQuaternion =
             new THREE.Quaternion();
@@ -547,17 +541,14 @@
   </div>
 
 
-
   <button id="sound">
     🔊 Включить звук
   </button>
 
 
-
   <div id="hint">
     Наведите камеру на карточку
   </div>
-
 
 
   <a-scene
@@ -567,9 +558,7 @@
       autoStart: true;
     "
 
-    color-space="
-      sRGB
-    "
+    color-space="sRGB"
 
     renderer="
       colorManagement: true;
@@ -589,15 +578,11 @@
     "
 
     embedded
-
   >
-
-
 
     <a-assets timeout="10000">
 
       <video
-
         id="personVideo"
 
         src="./assets/person_alpha.webm"
@@ -613,25 +598,18 @@
         loop
 
         muted
-
       ></video>
 
     </a-assets>
 
 
-
     <a-camera
-
-      position="
-        0 0 0
-      "
+      position="0 0 0"
 
       look-controls="
         enabled: false
       "
-
     ></a-camera>
-
 
 
     <a-entity
@@ -644,78 +622,61 @@
 
     >
 
-
-
       <!--
-      ====================================================
+      ======================================
       ТОЧКА НОГ
 
-      Сейчас QR предполагается
-      ПО ЦЕНТРУ target.
+      Смещаем точку
+      из центра всей фотографии
+      прямо на QR.
 
-      Поэтому:
-      X = 0
-      Y = 0
+      X = -0.23
+      Y = -0.22
 
-      Z = 0.02
-      небольшой отступ от поверхности.
-
-      Именно сюда "приклеены" стопы.
-      ====================================================
+      Z = 0.015
+      чуть выше поверхности.
+      ======================================
       -->
-
 
       <a-entity
 
         id="feetAnchor"
 
         position="
-          0
-          0
-          0.02
+          -0.23
+          -0.22
+          0.015
         "
 
         table-billboard
 
       >
 
-
-
         <!--
-        ==================================================
-        ФИГУРА
+        ======================================
+        ЧЕЛОВЕК
 
-        Ширина уменьшена,
-        чтобы визуально помещаться
-        на небольшом QR.
-
-        width = 0.28
-        height = 0.50
-
-        Половина height:
-        0.50 / 2 = 0.25
-
-        Поэтому нижняя граница
-        фигуры совпадает с feetAnchor.
-        ==================================================
+        Нижний край видео
+        находится точно
+        в точке feetAnchor.
+        ======================================
         -->
-
 
         <a-plane
 
           id="person"
 
           width="
-            0.28
+            0.24
           "
 
           height="
-            0.50
+            0.43
           "
 
           position="
             0
-            0.25
+            0.215
             0
           "
 
@@ -725,18 +686,13 @@
 
         ></a-plane>
 
-
-
       </a-entity>
-
 
 
     </a-entity>
 
 
-
   </a-scene>
-
 
 
   <script>
@@ -777,7 +733,6 @@
       );
 
 
-
     scene.addEventListener(
       "arReady",
       () => {
@@ -816,7 +771,6 @@
     );
 
 
-
     scene.addEventListener(
       "arError",
       () => {
@@ -826,7 +780,6 @@
 
       }
     );
-
 
 
     sound.addEventListener(
@@ -860,7 +813,6 @@
         }
       }
     );
-
 
 
     target.addEventListener(
@@ -897,7 +849,6 @@
         }
       }
     );
-
 
 
     target.addEventListener(
