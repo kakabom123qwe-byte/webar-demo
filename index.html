@@ -189,7 +189,6 @@
       },
 
       init: function () {
-
         const video = this.data.src;
         const texture = new THREE.VideoTexture(video);
 
@@ -198,7 +197,6 @@
         texture.generateMipmaps = false;
 
         const material = new THREE.ShaderMaterial({
-
           uniforms: {
             map: {
               value: texture
@@ -276,7 +274,6 @@
         });
 
         const applyMaterial = () => {
-
           const mesh =
             this.el.getObject3D("mesh");
 
@@ -300,17 +297,17 @@
 
     /*
     ==========================================
-    3D-ОРИЕНТАЦИЯ
+    ПЛАВНЫЙ BILLBOARD
 
-    QR / карточка = пол
-    Z = вверх от поверхности карточки
+    Человек стоит на карточке
+    и плавно поворачивается к камере.
 
-    Человек стоит ногами в feetAnchor
-    и поворачивается лицом к камере.
+    Чем меньше rotationSmooth,
+    тем меньше дрожь.
     ==========================================
     */
 
-    AFRAME.registerComponent("table-billboard", {
+    AFRAME.registerComponent("table-billboard-smooth", {
 
       init: function () {
 
@@ -336,8 +333,23 @@
         this.matrix =
           new THREE.Matrix4();
 
-        this.quaternion =
+        this.targetQuaternion =
           new THREE.Quaternion();
+
+        this.smoothedQuaternion =
+          new THREE.Quaternion();
+
+        this.initialized =
+          false;
+
+        /*
+        0.04 = очень плавно
+        0.06 = оптимально
+        0.10 = быстрее
+        */
+
+        this.rotationSmooth =
+          0.06;
       },
 
       tick: function () {
@@ -363,8 +375,8 @@
           targetEl.object3D;
 
         /*
-        Получаем камеру
-        в координатах карточки.
+        Получаем положение камеры
+        в координатах target.
         */
 
         cameraEl.object3D.getWorldPosition(
@@ -380,13 +392,11 @@
         );
 
         /*
-        Направление от QR
-        к телефону.
+        Направление от ног
+        к камере.
 
-        Z = 0,
-        чтобы человек
-        только вращался вокруг ног,
-        а не наклонялся.
+        Z принудительно = 0,
+        поэтому человек не заваливается.
         */
 
         this.forward.set(
@@ -408,10 +418,6 @@
 
         this.forward.normalize();
 
-        /*
-        Правая ось человека.
-        */
-
         this.right
           .crossVectors(
             this.up,
@@ -419,25 +425,41 @@
           )
           .normalize();
 
-        /*
-        X = вправо
-        Y = вверх
-        Z = к камере
-        */
-
         this.matrix.makeBasis(
           this.right,
           this.up,
           this.forward
         );
 
-        this.quaternion
+        this.targetQuaternion
           .setFromRotationMatrix(
             this.matrix
           );
 
+        /*
+        Первый кадр ставим сразу.
+        Дальше вращение сглаживается.
+        */
+
+        if (!this.initialized) {
+
+          this.smoothedQuaternion.copy(
+            this.targetQuaternion
+          );
+
+          this.initialized = true;
+
+        } else {
+
+          this.smoothedQuaternion.slerp(
+            this.targetQuaternion,
+            this.rotationSmooth
+          );
+
+        }
+
         object.quaternion.copy(
-          this.quaternion
+          this.smoothedQuaternion
         );
       }
     });
@@ -529,135 +551,95 @@
 
 
     <a-camera
-
       position="0 0 0"
-
-      look-controls="
-        enabled: false
-      "
-
+      look-controls="enabled: false"
     ></a-camera>
 
 
     <a-entity
-
       id="target"
-
-      mindar-image-target="
-        targetIndex: 0
-      "
-
+      mindar-image-target="targetIndex: 0"
     >
 
       <!--
-      ==============================
-      ЦЕНТР QR / ТОЧКА НОГ
+      ======================================
+      ТОЧКА НОГ / ЦЕНТР QR
 
+      Если QR чуть не по центру,
+      меняем только X и Y.
+
+      Сейчас:
       X = -0.23
       Y = -0.235
-
-      Если после теста будет
-      чуть не по центру,
-      будем менять только эти
-      две цифры.
-      ==============================
+      ======================================
       -->
 
       <a-entity
-
         id="feetAnchor"
-
-        position="
-          -0.23
-          -0.235
-          0.01
-        "
-
-        table-billboard
-
+        position="-0.23 -0.235 0.012"
       >
 
         <!--
-        ==============================
-        ФИГУРА
-
-        width  = 0.22
-        height = 0.39
-
-        Y = половина высоты,
-        поэтому стопы находятся
-        в точке feetAnchor.
-        ==============================
+        Отдельный контейнер,
+        который плавно вращается.
         -->
 
-        <a-plane
+        <a-entity
+          id="smoothPerson"
+          table-billboard-smooth
+        >
 
-          id="person"
+          <!--
+          ======================================
+          ЧЕЛОВЕК
 
-          width="
-            0.22
-          "
+          Ноги находятся в точке 0 0 0.
 
-          height="
-            0.39
-          "
+          Высота = 0.39
+          Поэтому plane поднят
+          на половину = 0.195
+          ======================================
+          -->
 
-          position="
-            0
-            0.195
-            0
-          "
-
-          alpha-video="
-            src: #personVideo
-          "
-
-        ></a-plane>
+          <a-plane
+            id="person"
+            width="0.22"
+            height="0.39"
+            position="0 0.195 0"
+            alpha-video="src: #personVideo"
+          ></a-plane>
 
 
-        <!--
-        Мягкая тень под ногами.
-        Помогает визуально
-        "поставить" человека
-        на поверхность.
-        -->
+          <!--
+          ======================================
+          МЯГКАЯ ТЕНЬ
 
-        <a-circle
+          Создаёт ощущение контакта
+          ног с QR.
+          ======================================
+          -->
 
-          radius="0.07"
+          <a-circle
+            radius="0.065"
+            position="0 0 0.001"
+            rotation="0 0 0"
 
-          position="
-            0
-            0
-            -0.002
-          "
+            material="
+              color: #000000;
+              transparent: true;
+              opacity: 0.18;
+              depthWrite: false;
+            "
 
-          rotation="
-            90
-            0
-            0
-          "
+            scale="1 0.32 1"
+          ></a-circle>
 
-          material="
-            color: #000000;
-            transparent: true;
-            opacity: 0.16;
-            depthWrite: false;
-          "
-
-          scale="
-            1
-            0.32
-            1
-          "
-
-        ></a-circle>
+        </a-entity>
 
       </a-entity>
 
 
     </a-entity>
-
 
   </a-scene>
 
@@ -766,9 +748,7 @@
           sound.style.display =
             "none";
 
-        }
-
-        catch (error) {
+        } catch (error) {
 
           console.log(
             "Audio error:",
@@ -793,15 +773,14 @@
           video.load();
         }
 
-        video.currentTime = 0;
+        video.currentTime =
+          0;
 
         try {
 
           await video.play();
 
-        }
-
-        catch (error) {
+        } catch (error) {
 
           console.log(
             "Video error:",
