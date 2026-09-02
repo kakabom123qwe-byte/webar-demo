@@ -36,7 +36,6 @@
       display: flex;
       align-items: center;
       justify-content: center;
-
       background:
         radial-gradient(
           circle at 50% 45%,
@@ -44,7 +43,6 @@
           #15221c 42%,
           #0b100d 78%
         );
-
       color: white;
       transition: opacity .35s ease;
     }
@@ -64,20 +62,15 @@
       width: 72px;
       height: 72px;
       margin: 0 auto 24px;
-
       display: flex;
       align-items: center;
       justify-content: center;
-
       border-radius: 20px;
       border: 1px solid rgba(157, 212, 177, .5);
-
       background: rgba(157, 212, 177, .08);
       color: #b8dfc6;
-
       font-size: 25px;
       font-weight: 700;
-
       box-shadow: 0 0 30px rgba(91, 168, 119, .14);
     }
 
@@ -96,11 +89,9 @@
       width: 34px;
       height: 34px;
       margin: 26px auto 0;
-
       border-radius: 50%;
       border: 2px solid rgba(255,255,255,.12);
       border-top-color: #9dd4b1;
-
       animation: rotateLoader .8s linear infinite;
     }
 
@@ -115,7 +106,6 @@
       inset: 0 !important;
       width: 100vw !important;
       height: 100vh !important;
-
       background: transparent !important;
       z-index: 2;
     }
@@ -127,74 +117,44 @@
     body video:not(#personVideo) {
       position: fixed !important;
       inset: 0 !important;
-
       width: 100vw !important;
       height: 100vh !important;
-
       object-fit: cover !important;
-
       opacity: 1 !important;
       visibility: visible !important;
-
       z-index: 0 !important;
-
       pointer-events: none !important;
     }
 
     #personVideo {
       position: fixed !important;
-
       left: -5px !important;
       top: -5px !important;
-
       width: 2px !important;
       height: 2px !important;
-
       opacity: 0.01 !important;
-
       pointer-events: none !important;
-
       z-index: -1 !important;
     }
 
     #hint {
       position: fixed;
-
       z-index: 1000;
-
       left: 50%;
-
-      bottom:
-        calc(
-          24px +
-          env(safe-area-inset-bottom)
-        );
-
+      bottom: calc(24px + env(safe-area-inset-bottom));
       transform: translateX(-50%);
-
       max-width: 85%;
-
       padding: 11px 17px;
-
       border-radius: 16px;
-
       background: rgba(10,16,12,.68);
-
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
-
       color: white;
-
       font-size: 14px;
-
       text-align: center;
-
       white-space: nowrap;
-
       opacity: 0;
-
       transition: opacity .3s ease;
-
       pointer-events: none;
     }
 
@@ -204,45 +164,23 @@
 
     #sound {
       display: none;
-
       position: fixed;
-
       z-index: 1100;
-
-      top:
-        calc(
-          16px +
-          env(safe-area-inset-top)
-        );
-
+      top: calc(16px + env(safe-area-inset-top));
       left: 50%;
-
       transform: translateX(-50%);
-
       padding: 12px 18px;
-
       border: none;
-
       border-radius: 16px;
-
       background: rgba(255,255,255,.96);
-
       color: #111;
-
       font-size: 15px;
       font-weight: 650;
-
       box-shadow: 0 5px 20px rgba(0,0,0,.18);
     }
   </style>
 
   <script>
-    /*
-    ============================================
-    ПРОЗРАЧНОЕ ВИДЕО
-    ============================================
-    */
-
     AFRAME.registerComponent("alpha-video", {
       schema: {
         src: {
@@ -253,101 +191,89 @@
       init: function () {
 
         const video = this.data.src;
+        const texture = new THREE.VideoTexture(video);
 
-        const texture =
-          new THREE.VideoTexture(video);
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        texture.generateMipmaps = false;
 
-        texture.minFilter =
-          THREE.LinearFilter;
+        const material = new THREE.ShaderMaterial({
 
-        texture.magFilter =
-          THREE.LinearFilter;
+          uniforms: {
+            map: {
+              value: texture
+            }
+          },
 
-        texture.generateMipmaps =
-          false;
+          vertexShader: `
+            varying vec2 vUv;
 
-        const material =
-          new THREE.ShaderMaterial({
+            void main() {
+              vUv = uv;
 
-            uniforms: {
-              map: {
-                value: texture
+              gl_Position =
+                projectionMatrix *
+                modelViewMatrix *
+                vec4(position, 1.0);
+            }
+          `,
+
+          fragmentShader: `
+            precision mediump float;
+
+            uniform sampler2D map;
+            varying vec2 vUv;
+
+            void main() {
+
+              vec2 rgbUV =
+                vec2(
+                  vUv.x * 0.5,
+                  vUv.y
+                );
+
+              vec2 maskUV =
+                vec2(
+                  0.5 + vUv.x * 0.5,
+                  vUv.y
+                );
+
+              vec4 rgb =
+                texture2D(
+                  map,
+                  rgbUV
+                );
+
+              float mask =
+                texture2D(
+                  map,
+                  maskUV
+                ).r;
+
+              float alpha =
+                smoothstep(
+                  0.10,
+                  0.58,
+                  mask
+                );
+
+              if (alpha < 0.02) {
+                discard;
               }
-            },
 
-            vertexShader: `
-              varying vec2 vUv;
+              gl_FragColor =
+                vec4(
+                  rgb.rgb,
+                  alpha
+                );
+            }
+          `,
 
-              void main() {
-
-                vUv = uv;
-
-                gl_Position =
-                  projectionMatrix *
-                  modelViewMatrix *
-                  vec4(position, 1.0);
-              }
-            `,
-
-            fragmentShader: `
-              precision mediump float;
-
-              uniform sampler2D map;
-
-              varying vec2 vUv;
-
-              void main() {
-
-                vec2 rgbUV =
-                  vec2(
-                    vUv.x * 0.5,
-                    vUv.y
-                  );
-
-                vec2 maskUV =
-                  vec2(
-                    0.5 + vUv.x * 0.5,
-                    vUv.y
-                  );
-
-                vec4 rgb =
-                  texture2D(
-                    map,
-                    rgbUV
-                  );
-
-                float mask =
-                  texture2D(
-                    map,
-                    maskUV
-                  ).r;
-
-                float alpha =
-                  smoothstep(
-                    0.10,
-                    0.58,
-                    mask
-                  );
-
-                if (
-                  alpha < 0.02
-                ) {
-                  discard;
-                }
-
-                gl_FragColor =
-                  vec4(
-                    rgb.rgb,
-                    alpha
-                  );
-              }
-            `,
-
-            transparent: true,
-            depthWrite: false,
-            depthTest: true,
-            side: THREE.DoubleSide
-          });
+          transparent: true,
+          depthWrite: false,
+          depthTest: true,
+          side: THREE.DoubleSide
+        });
 
         const applyMaterial = () => {
 
@@ -358,11 +284,8 @@
             return;
           }
 
-          mesh.material =
-            material;
-
-          mesh.material.needsUpdate =
-            true;
+          mesh.material = material;
+          mesh.material.needsUpdate = true;
         };
 
         applyMaterial();
@@ -376,140 +299,148 @@
 
 
     /*
-    ============================================
-    BILLBOARD
+    ==========================================
+    3D-ОРИЕНТАЦИЯ
 
-    Держим фигуру вертикально
-    и разворачиваем лицом к камере
-    ============================================
+    QR / карточка = пол
+    Z = вверх от поверхности карточки
+
+    Человек стоит ногами в feetAnchor
+    и поворачивается лицом к камере.
+    ==========================================
     */
 
-    AFRAME.registerComponent(
-      "table-billboard",
-      {
+    AFRAME.registerComponent("table-billboard", {
 
-        tick: function () {
+      init: function () {
 
-          const cameraEl =
-            document.querySelector(
-              "a-camera"
-            );
+        this.cameraWorld =
+          new THREE.Vector3();
 
-          if (!cameraEl) {
-            return;
-          }
+        this.cameraLocal =
+          new THREE.Vector3();
 
-          const object =
-            this.el.object3D;
+        this.forward =
+          new THREE.Vector3();
 
-          const parent =
-            object.parent;
+        this.right =
+          new THREE.Vector3();
 
-          if (!parent) {
-            return;
-          }
-
-          const cameraWorld =
-            new THREE.Vector3();
-
-          cameraEl.object3D.getWorldPosition(
-            cameraWorld
+        this.up =
+          new THREE.Vector3(
+            0,
+            0,
+            1
           );
 
-          const anchorWorld =
-            new THREE.Vector3();
+        this.matrix =
+          new THREE.Matrix4();
 
-          object.getWorldPosition(
-            anchorWorld
+        this.quaternion =
+          new THREE.Quaternion();
+      },
+
+      tick: function () {
+
+        const cameraEl =
+          document.querySelector(
+            "a-camera"
           );
 
-          const up =
-            new THREE.Vector3(
-              0,
-              1,
-              0
-            );
-
-          const forward =
-            new THREE.Vector3().subVectors(
-              cameraWorld,
-              anchorWorld
-            );
-
-          /*
-          Убираем вертикальную
-          составляющую.
-
-          Из-за этого фигура
-          остаётся вертикальной,
-          а не наклоняется
-          к телефону.
-          */
-
-          forward.y = 0;
-
-          if (
-            forward.lengthSq() <
-            0.000001
-          ) {
-            return;
-          }
-
-          forward.normalize();
-
-          const right =
-            new THREE.Vector3()
-              .crossVectors(
-                up,
-                forward
-              )
-              .normalize();
-
-          const correctedForward =
-            new THREE.Vector3()
-              .crossVectors(
-                right,
-                up
-              )
-              .normalize();
-
-          const matrix =
-            new THREE.Matrix4();
-
-          matrix.makeBasis(
-            right,
-            up,
-            correctedForward
+        const targetEl =
+          document.querySelector(
+            "#target"
           );
 
-          const desiredWorldQuaternion =
-            new THREE.Quaternion();
-
-          desiredWorldQuaternion
-            .setFromRotationMatrix(
-              matrix
-            );
-
-          const parentWorldQuaternion =
-            new THREE.Quaternion();
-
-          parent.getWorldQuaternion(
-            parentWorldQuaternion
-          );
-
-          parentWorldQuaternion.invert();
-
-          const localQuaternion =
-            parentWorldQuaternion.multiply(
-              desiredWorldQuaternion
-            );
-
-          object.quaternion.copy(
-            localQuaternion
-          );
+        if (!cameraEl || !targetEl) {
+          return;
         }
+
+        const object =
+          this.el.object3D;
+
+        const targetObject =
+          targetEl.object3D;
+
+        /*
+        Получаем камеру
+        в координатах карточки.
+        */
+
+        cameraEl.object3D.getWorldPosition(
+          this.cameraWorld
+        );
+
+        this.cameraLocal.copy(
+          this.cameraWorld
+        );
+
+        targetObject.worldToLocal(
+          this.cameraLocal
+        );
+
+        /*
+        Направление от QR
+        к телефону.
+
+        Z = 0,
+        чтобы человек
+        только вращался вокруг ног,
+        а не наклонялся.
+        */
+
+        this.forward.set(
+          this.cameraLocal.x -
+          object.position.x,
+
+          this.cameraLocal.y -
+          object.position.y,
+
+          0
+        );
+
+        if (
+          this.forward.lengthSq() <
+          0.000001
+        ) {
+          return;
+        }
+
+        this.forward.normalize();
+
+        /*
+        Правая ось человека.
+        */
+
+        this.right
+          .crossVectors(
+            this.up,
+            this.forward
+          )
+          .normalize();
+
+        /*
+        X = вправо
+        Y = вверх
+        Z = к камере
+        */
+
+        this.matrix.makeBasis(
+          this.right,
+          this.up,
+          this.forward
+        );
+
+        this.quaternion
+          .setFromRotationMatrix(
+            this.matrix
+          );
+
+        object.quaternion.copy(
+          this.quaternion
+        );
       }
-    );
+    });
   </script>
 </head>
 
@@ -563,6 +494,7 @@
     renderer="
       colorManagement: true;
       alpha: true;
+      antialias: true;
     "
 
     vr-mode-ui="
@@ -584,19 +516,12 @@
 
       <video
         id="personVideo"
-
         src="./assets/person_alpha.webm"
-
         preload="metadata"
-
         playsinline
-
         webkit-playsinline
-
         crossorigin="anonymous"
-
         loop
-
         muted
       ></video>
 
@@ -604,11 +529,13 @@
 
 
     <a-camera
+
       position="0 0 0"
 
       look-controls="
         enabled: false
       "
+
     ></a-camera>
 
 
@@ -623,19 +550,17 @@
     >
 
       <!--
-      ======================================
-      ТОЧКА НОГ
-
-      Смещаем точку
-      из центра всей фотографии
-      прямо на QR.
+      ==============================
+      ЦЕНТР QR / ТОЧКА НОГ
 
       X = -0.23
-      Y = -0.22
+      Y = -0.235
 
-      Z = 0.015
-      чуть выше поверхности.
-      ======================================
+      Если после теста будет
+      чуть не по центру,
+      будем менять только эти
+      две цифры.
+      ==============================
       -->
 
       <a-entity
@@ -644,8 +569,8 @@
 
         position="
           -0.23
-          -0.22
-          0.015
+          -0.235
+          0.01
         "
 
         table-billboard
@@ -653,13 +578,16 @@
       >
 
         <!--
-        ======================================
-        ЧЕЛОВЕК
+        ==============================
+        ФИГУРА
 
-        Нижний край видео
-        находится точно
+        width  = 0.22
+        height = 0.39
+
+        Y = половина высоты,
+        поэтому стопы находятся
         в точке feetAnchor.
-        ======================================
+        ==============================
         -->
 
         <a-plane
@@ -667,16 +595,16 @@
           id="person"
 
           width="
-            0.24
+            0.22
           "
 
           height="
-            0.43
+            0.39
           "
 
           position="
             0
-            0.215
+            0.195
             0
           "
 
@@ -685,6 +613,45 @@
           "
 
         ></a-plane>
+
+
+        <!--
+        Мягкая тень под ногами.
+        Помогает визуально
+        "поставить" человека
+        на поверхность.
+        -->
+
+        <a-circle
+
+          radius="0.07"
+
+          position="
+            0
+            0
+            -0.002
+          "
+
+          rotation="
+            90
+            0
+            0
+          "
+
+          material="
+            color: #000000;
+            transparent: true;
+            opacity: 0.16;
+            depthWrite: false;
+          "
+
+          scale="
+            1
+            0.32
+            1
+          "
+
+        ></a-circle>
 
       </a-entity>
 
@@ -788,15 +755,13 @@
 
         try {
 
-          video.muted =
-            false;
+          video.muted = false;
 
           await video.play();
 
           video.pause();
 
-          video.currentTime =
-            0;
+          video.currentTime = 0;
 
           sound.style.display =
             "none";
@@ -825,13 +790,10 @@
         if (
           video.readyState < 2
         ) {
-
           video.load();
-
         }
 
-        video.currentTime =
-          0;
+        video.currentTime = 0;
 
         try {
 
