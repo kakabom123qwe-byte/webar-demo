@@ -2,12 +2,10 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-
   <meta
     name="viewport"
-    content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover"
+    content="width=device-width,initial-scale=1,viewport-fit=cover"
   >
-
   <meta name="apple-mobile-web-app-capable" content="yes">
 
   <title>AR — Дмитрий Рогозин</title>
@@ -16,1242 +14,366 @@
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
-
-    html,
-    body {
+    html, body {
       margin: 0;
       width: 100%;
       height: 100%;
       overflow: hidden;
-
       background: transparent !important;
-
-      font-family:
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        Arial,
-        sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont,
+        "Segoe UI", Arial, sans-serif;
     }
-
-
-    /*
-    ==========================================
-    AR SCENE
-    ==========================================
-    */
 
     a-scene {
       position: fixed !important;
-
       inset: 0 !important;
-
       width: 100vw !important;
       height: 100vh !important;
-
       background: transparent !important;
-
       z-index: 2;
     }
 
-
     canvas.a-canvas {
-
       background: transparent !important;
-
     }
-
-
-    /*
-    ==========================================
-    КАМЕРА MINDAR
-    ==========================================
-
-    Это очень важный блок.
-
-    Он оставляет реальное изображение
-    камеры позади AR.
-    */
 
     body video:not(#personVideo) {
-
       position: fixed !important;
-
       inset: 0 !important;
-
       width: 100vw !important;
       height: 100vh !important;
-
       object-fit: cover !important;
-
       opacity: 1 !important;
-
       visibility: visible !important;
-
       display: block !important;
-
       z-index: 0 !important;
-
       pointer-events: none !important;
-
     }
-
-
-    /*
-    ==========================================
-    ВИДЕО ЧЕЛОВЕКА
-    ==========================================
-    */
 
     #personVideo {
-
       position: fixed !important;
-
       left: -5px !important;
       top: -5px !important;
-
       width: 2px !important;
       height: 2px !important;
-
       opacity: 0.01 !important;
-
       pointer-events: none !important;
-
       z-index: -1 !important;
-
     }
-
-
-    /*
-    ==========================================
-    КРАСИВЫЙ СТАТУС
-    ==========================================
-    */
 
     #hint {
-
       position: fixed;
-
       z-index: 1000;
-
       left: 50%;
-
-      bottom:
-        calc(22px + env(safe-area-inset-bottom));
-
+      bottom: calc(22px + env(safe-area-inset-bottom));
       transform: translateX(-50%);
-
+      width: max-content;
+      max-width: calc(100vw - 60px);
       padding: 11px 17px;
-
       border-radius: 18px;
-
-      background:
-        rgba(0,0,0,0.48);
-
-      backdrop-filter:
-        blur(12px);
-
-      -webkit-backdrop-filter:
-        blur(12px);
-
+      background: rgba(0, 0, 0, 0.48);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       color: white;
-
       font-size: 14px;
-
-      font-weight: 500;
-
       text-align: center;
-
-      white-space: nowrap;
-
       pointer-events: none;
-
-      transition:
-        opacity .25s ease;
-
+      transition: opacity 0.25s ease;
     }
-
-
-    /*
-    ==========================================
-    ЗВУК
-    ==========================================
-    */
 
     #sound {
-
       position: fixed;
-
       z-index: 1100;
-
-      top:
-        calc(16px + env(safe-area-inset-top));
-
+      top: calc(16px + env(safe-area-inset-top));
       left: 50%;
-
-      transform:
-        translateX(-50%);
-
+      transform: translateX(-50%);
       border: 0;
-
       border-radius: 18px;
-
       padding: 12px 18px;
-
-      background:
-        rgba(255,255,255,0.94);
-
+      background: rgba(255, 255, 255, 0.94);
       color: #111;
-
       font-size: 14px;
-
-      font-weight: 650;
-
-      box-shadow:
-        0 5px 22px
-        rgba(0,0,0,.18);
-
+      font-weight: 600;
+      box-shadow: 0 5px 22px rgba(0, 0, 0, 0.18);
       cursor: pointer;
-
-      transition:
-        opacity .2s ease,
-        transform .2s ease;
-
     }
-
-
-    #sound:active {
-
-      transform:
-        translateX(-50%)
-        scale(.96);
-
-    }
-
-
-    /*
-    ==========================================
-    ЗАПУСК
-    ==========================================
-    */
 
     #startup {
-
       position: fixed;
-
       inset: 0;
-
       z-index: 900;
-
       display: flex;
-
       align-items: center;
-
       justify-content: center;
-
       pointer-events: none;
-
-      transition:
-        opacity .35s ease;
-
     }
-
 
     #startupBox {
-
       padding: 14px 20px;
-
       border-radius: 20px;
-
-      background:
-        rgba(0,0,0,.48);
-
-      backdrop-filter:
-        blur(15px);
-
-      -webkit-backdrop-filter:
-        blur(15px);
-
+      background: rgba(0, 0, 0, 0.48);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
       color: white;
-
       font-size: 15px;
-
-      box-shadow:
-        0 6px 25px
-        rgba(0,0,0,.16);
-
     }
-
-
-    /*
-    Встроенные браузеры
-    */
-
-    #browserWarning {
-
-      display: none;
-
-      position: fixed;
-
-      inset: 0;
-
-      z-index: 5000;
-
-      background:
-        rgba(8,8,8,.95);
-
-      color: white;
-
-      padding: 30px;
-
-      box-sizing: border-box;
-
-      align-items: center;
-
-      justify-content: center;
-
-      text-align: center;
-
-    }
-
-
-    #browserWarning .box {
-
-      max-width: 380px;
-
-    }
-
-
-    #browserWarning h2 {
-
-      margin: 0 0 12px;
-
-      font-size: 25px;
-
-    }
-
-
-    #browserWarning p {
-
-      margin: 0;
-
-      font-size: 16px;
-
-      line-height: 1.5;
-
-      opacity: .8;
-
-    }
-
   </style>
 
-
-
   <script>
-
-    /*
-    ==================================================
-    ПРОЗРАЧНОЕ ВИДЕО
-
-    person_alpha.webm:
-
-    ЛЕВАЯ половина = человек
-    ПРАВАЯ половина = alpha mask
-    ==================================================
-    */
-
-    AFRAME.registerComponent(
-      "alpha-video",
-      {
-
-        schema: {
-
-          src: {
-            type: "selector"
-          }
-
-        },
-
-
-        init: function () {
-
-          const video =
-            this.data.src;
-
-
-          /*
-          VideoTexture
-          */
-
-          const texture =
-            new THREE.VideoTexture(video);
-
-
-          texture.minFilter =
-            THREE.LinearFilter;
-
-
-          texture.magFilter =
-            THREE.LinearFilter;
-
-
-          texture.generateMipmaps =
-            false;
-
-
-
-          /*
-          Собственный материал
-          */
-
-          const material =
-            new THREE.ShaderMaterial({
-
-              uniforms: {
-
-                map: {
-                  value: texture
-                }
-
-              },
-
-
-              vertexShader: `
-
-                varying vec2 vUv;
-
-
-                void main() {
-
-                  vUv = uv;
-
-
-                  gl_Position =
-
-                    projectionMatrix *
-
-                    modelViewMatrix *
-
-                    vec4(
-                      position,
-                      1.0
-                    );
-
-                }
-
-              `,
-
-
-              fragmentShader: `
-
-                precision mediump float;
-
-
-                uniform sampler2D map;
-
-
-                varying vec2 vUv;
-
-
-
-                void main() {
-
-
-                  /*
-                  RGB
-                  Левая половина видео
-                  */
-
-                  vec2 rgbUV = vec2(
-
-                    vUv.x * 0.5,
-
-                    vUv.y
-
-                  );
-
-
-
-                  /*
-                  ALPHA MASK
-                  Правая половина видео
-                  */
-
-                  vec2 maskUV = vec2(
-
-                    0.5 +
-
-                    vUv.x * 0.5,
-
-                    vUv.y
-
-                  );
-
-
-
-                  vec4 rgb =
-
-                    texture2D(
-
-                      map,
-
-                      rgbUV
-
-                    );
-
-
-
-                  float mask =
-
-                    texture2D(
-
-                      map,
-
-                      maskUV
-
-                    ).r;
-
-
-
-                  /*
-                  Мягкие края человека
-                  */
-
-                  float alpha =
-
-                    smoothstep(
-
-                      0.10,
-
-                      0.58,
-
-                      mask
-
-                    );
-
-
-
-                  /*
-                  Полностью удаляем фон
-                  */
-
-                  if (
-
-                    alpha < 0.02
-
-                  ) {
-
-                    discard;
-
-                  }
-
-
-
-                  gl_FragColor =
-
-                    vec4(
-
-                      rgb.rgb,
-
-                      alpha
-
-                    );
-
-                }
-
-              `,
-
-
-              transparent:
-                true,
-
-
-              depthWrite:
-                false,
-
-
-              depthTest:
-                true,
-
-
-              side:
-                THREE.DoubleSide
-
-            });
-
-
-
-          /*
-          Ставим материал на plane
-          */
-
-          const applyMaterial = () => {
-
-
-            const mesh =
-
-              this.el.getObject3D(
-                "mesh"
+    // Видео: слева цветное изображение, справа маска прозрачности.
+    AFRAME.registerComponent("alpha-video", {
+      schema: {
+        src: { type: "selector" }
+      },
+
+      init: function () {
+        const THREE = AFRAME.THREE;
+        const video = this.data.src;
+
+        this.texture = new THREE.VideoTexture(video);
+        this.texture.minFilter = THREE.LinearFilter;
+        this.texture.magFilter = THREE.LinearFilter;
+        this.texture.generateMipmaps = false;
+
+        this.material = new THREE.ShaderMaterial({
+          uniforms: {
+            map: { value: this.texture }
+          },
+
+          vertexShader: `
+            varying vec2 vUv;
+
+            void main() {
+              vUv = uv;
+              gl_Position = projectionMatrix
+                * modelViewMatrix
+                * vec4(position, 1.0);
+            }
+          `,
+
+          fragmentShader: `
+            precision mediump float;
+
+            uniform sampler2D map;
+            varying vec2 vUv;
+
+            void main() {
+              vec2 rgbUV = vec2(vUv.x * 0.5, vUv.y);
+              vec2 maskUV = vec2(
+                0.5 + vUv.x * 0.5,
+                vUv.y
               );
 
+              vec3 rgb = texture2D(map, rgbUV).rgb;
+              float mask = texture2D(map, maskUV).r;
+              float alpha = smoothstep(0.10, 0.58, mask);
 
-            if (!mesh) {
+              if (alpha < 0.02) discard;
 
-              return;
-
+              gl_FragColor = vec4(rgb, alpha);
             }
+          `,
 
+          transparent: true,
+          depthWrite: false,
+          depthTest: true,
+          side: THREE.DoubleSide
+        });
 
-            mesh.material =
-              material;
+        this.applyMaterial = () => {
+          const mesh = this.el.getObject3D("mesh");
 
+          if (mesh) {
+            mesh.material = this.material;
+          }
+        };
 
-            mesh.material.needsUpdate =
-              true;
+        this.applyMaterial();
+        this.el.addEventListener("object3dset", this.applyMaterial);
+      },
 
-          };
-
-
-          applyMaterial();
-
-
-          this.el.addEventListener(
-
-            "object3dset",
-
-            applyMaterial
-
-          );
-
-        }
-
+      remove: function () {
+        this.el.removeEventListener("object3dset", this.applyMaterial);
+        if (this.texture) this.texture.dispose();
+        if (this.material) this.material.dispose();
       }
-
-    );
-
+    });
   </script>
-
 </head>
 
-
-
 <body>
-
-
-  <!-- ВСТРОЕННЫЙ БРАУЗЕР -->
-
-  <div id="browserWarning">
-
-    <div class="box">
-
-      <h2>
-        Откройте в Safari
-      </h2>
-
-      <p>
-        Для корректной работы дополненной
-        реальности откройте эту страницу
-        в Safari.
-      </p>
-
-    </div>
-
-  </div>
-
-
-
-  <!-- КРАСИВЫЙ БЫСТРЫЙ ЗАПУСК -->
-
   <div id="startup">
-
-    <div id="startupBox">
-
-      Запускаем AR…
-
-    </div>
-
+    <div id="startupBox">Запускаем AR…</div>
   </div>
 
+  <button id="sound" type="button">🔊 Включить звук</button>
 
-
-  <!-- ЗВУК -->
-
-  <button id="sound">
-
-    🔊 Включить звук
-
-  </button>
-
-
-
-  <!-- СТАТУС -->
-
-  <div id="hint">
-
+  <div id="hint" role="status">
     Разрешите доступ к камере
-
   </div>
-
-
-
-  <!--
-  ==================================================
-  MINDAR
-  ==================================================
-  -->
 
   <a-scene
-
     mindar-image="
       imageTargetSrc: ./assets/target.mind;
       autoStart: true;
     "
-
     color-space="sRGB"
-
     renderer="
       colorManagement: true;
       alpha: true;
       antialias: true;
     "
-
-    vr-mode-ui="
-      enabled: false
-    "
-
-    device-orientation-permission-ui="
-      enabled: false
-    "
-
-    loading-screen="
-      enabled: false
-    "
-
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false"
+    loading-screen="enabled: false"
     embedded
-
   >
-
-
-
-    <a-assets
-      timeout="30000"
-    >
-
-
+    <a-assets timeout="30000">
       <video
-
         id="personVideo"
-
-        src="./assets/person_alpha.webm"
-
+        src="./assets/person_packed.mp4"
         preload="auto"
-
         playsinline
-
         webkit-playsinline
-
         crossorigin="anonymous"
-
         loop
-
         muted
-
       ></video>
-
-
     </a-assets>
 
-
-
-    <!-- CAMERA -->
-
     <a-camera
-
       position="0 0 0"
-
-      look-controls="
-        enabled: false
-      "
-
+      look-controls="enabled: false"
     ></a-camera>
 
-
-
-    <!--
-    ==================================================
-    TARGET
-    ==================================================
-    -->
-
     <a-entity
-
       id="target"
-
-      mindar-image-target="
-        targetIndex: 0
-      "
-
+      mindar-image-target="targetIndex: 0"
     >
-
-
-
-      <!--
-      =================================================
-      ЧЕЛОВЕК
-
-      По центру метки.
-
-      X = 0
-      Y = 0.575
-      Z = 0.035
-
-      Z чуть вынесен вперед,
-      поэтому человек выглядит
-      менее "приклеенным".
-      =================================================
-      -->
-
-
       <a-plane
-
         id="person"
-
-        width="0.68"
-
+        width="0.675"
         height="1.20"
-
-        position="
-          0
-          0.60
-          0.035
-        "
-
-        rotation="
-          0
-          0
-          0
-        "
-
-        scale="
-          0.01
-          0.01
-          0.01
-        "
-
-        alpha-video="
-          src: #personVideo
-        "
-
+        position="0 0.60 0.035"
+        rotation="0 0 0"
+        scale="0.01 0.01 0.01"
+        alpha-video="src: #personVideo"
       ></a-plane>
-
-
-
     </a-entity>
-
-
   </a-scene>
 
-
-
   <script>
+    const scene = document.querySelector("a-scene");
+    const video = document.querySelector("#personVideo");
+    const target = document.querySelector("#target");
+    const person = document.querySelector("#person");
+    const hint = document.querySelector("#hint");
+    const sound = document.querySelector("#sound");
+    const startup = document.querySelector("#startup");
 
+    let targetVisible = false;
+    let hintTimer;
 
-    const scene =
-
-      document.querySelector(
-        "a-scene"
-      );
-
-
-    const video =
-
-      document.querySelector(
-        "#personVideo"
-      );
-
-
-    const target =
-
-      document.querySelector(
-        "#target"
-      );
-
-
-    const person =
-
-      document.querySelector(
-        "#person"
-      );
-
-
-    const hint =
-
-      document.querySelector(
-        "#hint"
-      );
-
-
-    const sound =
-
-      document.querySelector(
-        "#sound"
-      );
-
-
-    const startup =
-
-      document.querySelector(
-        "#startup"
-      );
-
-
-    const warning =
-
-      document.querySelector(
-        "#browserWarning"
-      );
-
-
-
-    /*
-    ==========================================
-    ВСТРОЕННЫЙ БРАУЗЕР
-    ==========================================
-    */
-
-
-    const ua =
-
-      navigator.userAgent || "";
-
-
-    const inAppBrowser =
-
-      /VK|Instagram|FBAN|FBAV|Telegram/i
-
-      .test(ua);
-
-
-
-    if (
-
-      inAppBrowser
-
-    ) {
-
-
-      warning.style.display =
-
-        "flex";
-
-
+    function showHint(message) {
+      clearTimeout(hintTimer);
+      hint.textContent = message;
+      hint.style.opacity = "1";
     }
 
+    function hideHintLater() {
+      clearTimeout(hintTimer);
+      hintTimer = setTimeout(() => {
+        if (targetVisible && !video.paused) {
+          hint.style.opacity = "0";
+        }
+      }, 1500);
+    }
 
+    scene.addEventListener("arReady", () => {
+      startup.style.display = "none";
+      showHint("Наведите камеру на карточку");
+    });
 
-    /*
-    ==========================================
-    AR ЗАПУЩЕН
-    ==========================================
-    */
+    scene.addEventListener("arError", () => {
+      startup.style.display = "none";
+      showHint(
+        "Не удалось запустить камеру. Проверьте разрешение в браузере."
+      );
+    });
 
+    video.addEventListener("error", () => {
+      startup.style.display = "none";
+      showHint(
+        "Видео не загрузилось. Проверьте файл assets/person_packed.mp4"
+      );
+    });
 
-    scene.addEventListener(
+    sound.addEventListener("click", async () => {
+      sound.disabled = true;
 
-      "arReady",
+      try {
+        video.muted = false;
+        await video.play();
 
-      () => {
-
-
-        startup.style.opacity =
-          "0";
-
-
-        setTimeout(
-
-          () => {
-
-            startup.style.display =
-              "none";
-
-          },
-
-          350
-
-        );
-
-
-        hint.textContent =
-
-          "Наведите камеру на карточку";
-
-
-      }
-
-    );
-
-
-
-    /*
-    ==========================================
-    ОШИБКА
-    ==========================================
-    */
-
-
-    scene.addEventListener(
-
-      "arError",
-
-      () => {
-
-
-        startup.style.display =
-          "none";
-
-
-        hint.textContent =
-
-          "Не удалось запустить камеру";
-
-
-      }
-
-    );
-
-
-
-    /*
-    ==========================================
-    ВКЛЮЧАЕМ ЗВУК
-    ==========================================
-    */
-
-
-    sound.addEventListener(
-
-      "click",
-
-      async () => {
-
-
-        try {
-
-
-          video.muted =
-            false;
-
-
-          await video.play();
-
-
+        if (!targetVisible) {
           video.pause();
-
-
-          video.currentTime =
-            0;
-
-
-          sound.style.opacity =
-            "0";
-
-
-          setTimeout(
-
-            () => {
-
-              sound.style.display =
-                "none";
-
-            },
-
-            200
-
-          );
-
-
+          video.currentTime = 0;
+        } else {
+          hideHintLater();
         }
 
-
-        catch (error) {
-
-
-          console.log(
-
-            "Ошибка звука:",
-
-            error
-
-          );
-
-
-        }
-
+        sound.style.display = "none";
+      } catch (error) {
+        video.muted = true;
+        showHint("Нажмите кнопку звука ещё раз");
+        console.error("Не удалось включить звук:", error);
+      } finally {
+        sound.disabled = false;
       }
+    });
 
-    );
+    target.addEventListener("targetFound", async () => {
+      targetVisible = true;
+      showHint("Карточка найдена");
 
+      person.removeAttribute("animation__appear");
+      person.setAttribute("animation__appear", {
+        property: "scale",
+        from: "0.01 0.01 0.01",
+        to: "1 1 1",
+        dur: 380,
+        easing: "easeOutBack"
+      });
 
+      try {
+        video.currentTime = 0;
+        await video.play();
 
-    /*
-    ==========================================
-    НАШЛИ КАРТОЧКУ
-    ==========================================
-    */
-
-
-    target.addEventListener(
-
-      "targetFound",
-
-      async () => {
-
-
-        hint.textContent =
-
-          "Карточка найдена";
-
-
-        /*
-        Человек появляется
-        немного объёмнее:
-        от маленького размера
-        до нормального.
-        */
-
-
-        person.setAttribute(
-
-          "animation__appear",
-
-          {
-
-            property:
-              "scale",
-
-            from:
-              "0.01 0.01 0.01",
-
-            to:
-              "1 1 1",
-
-            dur:
-              380,
-
-            easing:
-              "easeOutBack"
-
-          }
-
-        );
-
-
-
-        video.currentTime =
-          0;
-
-
-
-        try {
-
-
-          await video.play();
-
-
+        if (!targetVisible) {
+          video.pause();
+          return;
         }
 
+        hideHintLater();
+      } catch (error) {
+        if (!targetVisible) return;
 
-        catch (error) {
-
-
-          console.log(
-
-            "Ошибка видео:",
-
-            error
-
-          );
-
-
-        }
-
-
-        /*
-        Через секунду
-        убираем нижнюю подсказку.
-        */
-
-
-        setTimeout(
-
-          () => {
-
-
-            hint.style.opacity =
-              "0";
-
-
-          },
-
-          1200
-
-        );
-
-
+        sound.style.display = "block";
+        sound.textContent = "▶ Запустить видео со звуком";
+        showHint("Нажмите кнопку сверху для запуска видео");
+        console.error("Не удалось запустить видео:", error);
       }
+    });
 
-    );
+    target.addEventListener("targetLost", () => {
+      targetVisible = false;
+      video.pause();
 
+      person.removeAttribute("animation__appear");
+      person.setAttribute("scale", "0.01 0.01 0.01");
 
-
-    /*
-    ==========================================
-    ПОТЕРЯЛИ КАРТОЧКУ
-    ==========================================
-    */
-
-
-    target.addEventListener(
-
-      "targetLost",
-
-      () => {
-
-
-        video.pause();
-
-
-        person.removeAttribute(
-          "animation__appear"
-        );
-
-
-        person.setAttribute(
-
-          "scale",
-
-          "0.01 0.01 0.01"
-
-        );
-
-
-        hint.style.opacity =
-          "1";
-
-
-        hint.textContent =
-
-          "Наведите камеру на карточку";
-
-
-      }
-
-    );
-
-
+      showHint("Наведите камеру на карточку");
+    });
   </script>
-
-
 </body>
-
 </html>
