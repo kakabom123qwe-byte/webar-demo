@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta
     name="viewport"
-    content="width=device-width,initial-scale=1,viewport-fit=cover"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
   >
   <meta name="apple-mobile-web-app-capable" content="yes">
 
@@ -19,7 +19,7 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: transparent !important;
+      background: transparent;
       font-family: -apple-system, BlinkMacSystemFont,
         "Segoe UI", Arial, sans-serif;
     }
@@ -27,8 +27,8 @@
     a-scene {
       position: fixed !important;
       inset: 0 !important;
-      width: 100vw !important;
-      height: 100vh !important;
+      width: 100% !important;
+      height: 100% !important;
       background: transparent !important;
       z-index: 2;
     }
@@ -37,17 +37,9 @@
       background: transparent !important;
     }
 
-    body video:not(#personVideo) {
-      position: fixed !important;
-      inset: 0 !important;
-      width: 100vw !important;
-      height: 100vh !important;
-      object-fit: cover !important;
-      opacity: 1 !important;
-      visibility: visible !important;
-      display: block !important;
-      z-index: 0 !important;
-      pointer-events: none !important;
+    /* Размер камеры и её смещение рассчитывает MindAR. */
+    body > video {
+      pointer-events: none;
     }
 
     #personVideo {
@@ -67,15 +59,17 @@
       left: 50%;
       bottom: calc(22px + env(safe-area-inset-bottom));
       transform: translateX(-50%);
+      box-sizing: border-box;
       width: max-content;
-      max-width: calc(100vw - 60px);
-      padding: 11px 17px;
+      max-width: calc(100vw - 32px);
+      padding: 12px 18px;
       border-radius: 18px;
-      background: rgba(0, 0, 0, 0.48);
+      background: rgba(0, 0, 0, 0.58);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       color: white;
       font-size: 14px;
+      line-height: 1.4;
       text-align: center;
       pointer-events: none;
       transition: opacity 0.25s ease;
@@ -87,15 +81,20 @@
       top: calc(16px + env(safe-area-inset-top));
       left: 50%;
       transform: translateX(-50%);
+      max-width: calc(100vw - 32px);
       border: 0;
       border-radius: 18px;
-      padding: 12px 18px;
-      background: rgba(255, 255, 255, 0.94);
+      padding: 13px 20px;
+      background: rgba(255, 255, 255, 0.96);
       color: #111;
       font-size: 14px;
       font-weight: 600;
       box-shadow: 0 5px 22px rgba(0, 0, 0, 0.18);
       cursor: pointer;
+    }
+
+    #sound:disabled {
+      opacity: 0.65;
     }
 
     #startup {
@@ -109,18 +108,24 @@
     }
 
     #startupBox {
-      padding: 14px 20px;
+      max-width: 280px;
+      margin: 20px;
+      padding: 16px 22px;
       border-radius: 20px;
-      background: rgba(0, 0, 0, 0.48);
-      backdrop-filter: blur(15px);
-      -webkit-backdrop-filter: blur(15px);
+      background: rgba(0, 0, 0, 0.58);
       color: white;
       font-size: 15px;
+      text-align: center;
+      line-height: 1.5;
     }
   </style>
 
   <script>
-    // Видео: слева цветное изображение, справа маска прозрачности.
+    /*
+      В файле person_packed.mp4:
+      левая половина — цветное изображение,
+      правая половина — маска прозрачности.
+    */
     AFRAME.registerComponent("alpha-video", {
       schema: {
         src: { type: "selector" }
@@ -137,7 +142,7 @@
 
         this.material = new THREE.ShaderMaterial({
           uniforms: {
-            map: { value: this.texture }
+            videoMap: { value: this.texture }
           },
 
           vertexShader: `
@@ -152,25 +157,34 @@
           `,
 
           fragmentShader: `
-            precision mediump float;
+            precision highp float;
 
-            uniform sampler2D map;
+            uniform sampler2D videoMap;
             varying vec2 vUv;
 
             void main() {
-              vec2 rgbUV = vec2(vUv.x * 0.5, vUv.y);
-              vec2 maskUV = vec2(
-                0.5 + vUv.x * 0.5,
-                vUv.y
-              );
+              // Отступ предотвращает смешивание двух половин.
+              float x = clamp(vUv.x, 0.001, 0.999);
 
-              vec3 rgb = texture2D(map, rgbUV).rgb;
-              float mask = texture2D(map, maskUV).r;
-              float alpha = smoothstep(0.10, 0.58, mask);
+              vec2 rgbUV = vec2(x * 0.5, vUv.y);
+              vec2 maskUV = vec2(0.5 + x * 0.5, vUv.y);
+
+              vec3 rgb = texture2D(videoMap, rgbUV).rgb;
+              float mask = texture2D(videoMap, maskUV).r;
+
+              float alpha = smoothstep(0.08, 0.85, mask);
 
               if (alpha < 0.02) discard;
 
-              gl_FragColor = vec4(rgb, alpha);
+              // В подготовленном видео цвет уже умножен на маску.
+              // Компенсируем это, чтобы края меньше темнели.
+              vec3 color = clamp(
+                rgb / max(mask, 0.08),
+                0.0,
+                1.0
+              );
+
+              gl_FragColor = vec4(color, alpha);
             }
           `,
 
@@ -185,6 +199,7 @@
 
           if (mesh) {
             mesh.material = this.material;
+            mesh.renderOrder = 2;
           }
         };
 
@@ -193,8 +208,78 @@
       },
 
       remove: function () {
-        this.el.removeEventListener("object3dset", this.applyMaterial);
+        this.el.removeEventListener(
+          "object3dset",
+          this.applyMaterial
+        );
+
         if (this.texture) this.texture.dispose();
+        if (this.material) this.material.dispose();
+      }
+    });
+
+    // Мягкая декоративная тень на поверхности коврика.
+    AFRAME.registerComponent("soft-shadow", {
+      init: function () {
+        const THREE = AFRAME.THREE;
+
+        this.material = new THREE.ShaderMaterial({
+          vertexShader: `
+            varying vec2 vUv;
+
+            void main() {
+              vUv = uv;
+              gl_Position = projectionMatrix
+                * modelViewMatrix
+                * vec4(position, 1.0);
+            }
+          `,
+
+          fragmentShader: `
+            precision mediump float;
+            varying vec2 vUv;
+
+            void main() {
+              vec2 p = (vUv - 0.5) * 2.0;
+              float distanceFromCenter = length(p);
+              float opacity = 1.0 - smoothstep(
+                0.05,
+                1.0,
+                distanceFromCenter
+              );
+
+              opacity = opacity * opacity * 0.26;
+
+              if (opacity < 0.002) discard;
+
+              gl_FragColor = vec4(0.0, 0.0, 0.0, opacity);
+            }
+          `,
+
+          transparent: true,
+          depthWrite: false,
+          side: THREE.DoubleSide
+        });
+
+        this.applyMaterial = () => {
+          const mesh = this.el.getObject3D("mesh");
+
+          if (mesh) {
+            mesh.material = this.material;
+            mesh.renderOrder = 1;
+          }
+        };
+
+        this.applyMaterial();
+        this.el.addEventListener("object3dset", this.applyMaterial);
+      },
+
+      remove: function () {
+        this.el.removeEventListener(
+          "object3dset",
+          this.applyMaterial
+        );
+
         if (this.material) this.material.dispose();
       }
     });
@@ -203,19 +288,30 @@
 
 <body>
   <div id="startup">
-    <div id="startupBox">Запускаем AR…</div>
+    <div id="startupBox">
+      Запускаем AR…<br>
+      Разрешите доступ к камере
+    </div>
   </div>
 
-  <button id="sound" type="button">🔊 Включить звук</button>
+  <button id="sound" type="button">
+    🔊 Включить звук
+  </button>
 
   <div id="hint" role="status">
-    Разрешите доступ к камере
+    Положите картинку коврика на ровную поверхность
   </div>
 
   <a-scene
     mindar-image="
-     imageTargetSrc: ./assets/target.mind?v=4;
+      imageTargetSrc: ./assets/target.mind?v=4;
       autoStart: true;
+      maxTrack: 1;
+      filterMinCF: 0.0005;
+      filterBeta: 0.001;
+      warmupTolerance: 5;
+      missTolerance: 10;
+      uiScanning: no;
     "
     color-space="sRGB"
     renderer="
@@ -244,19 +340,34 @@
     <a-camera
       position="0 0 0"
       look-controls="enabled: false"
+      wasd-controls="enabled: false"
     ></a-camera>
 
     <a-entity
       id="target"
       mindar-image-target="targetIndex: 0"
     >
+      <!-- Тень лежит в плоскости метки. -->
+      <a-plane
+        width="0.42"
+        height="0.24"
+        position="0 0 0.003"
+        rotation="0 0 0"
+        soft-shadow
+      ></a-plane>
+
+      <!--
+        Метка лежит горизонтально.
+        Ось Z метки направлена вверх от поверхности.
+        Поворот на 90 градусов ставит человека вертикально.
+      -->
       <a-plane
         id="person"
         width="0.675"
         height="1.20"
-        position="0 0.60 0.035"
-        rotation="0 0 0"
-        scale="0.01 0.01 0.01"
+        position="0 0 0.50"
+        rotation="90 0 0"
+        scale="1 1 1"
         alpha-video="src: #personVideo"
       ></a-plane>
     </a-entity>
@@ -266,13 +377,15 @@
     const scene = document.querySelector("a-scene");
     const video = document.querySelector("#personVideo");
     const target = document.querySelector("#target");
-    const person = document.querySelector("#person");
     const hint = document.querySelector("#hint");
     const sound = document.querySelector("#sound");
     const startup = document.querySelector("#startup");
 
     let targetVisible = false;
-    let hintTimer;
+    let hintTimer = null;
+    let soundEnabled = false;
+    let soundBusy = false;
+    let playbackAttempt = 0;
 
     function showHint(message) {
       clearTimeout(hintTimer);
@@ -282,42 +395,93 @@
 
     function hideHintLater() {
       clearTimeout(hintTimer);
+
       hintTimer = setTimeout(() => {
         if (targetVisible && !video.paused) {
           hint.style.opacity = "0";
         }
-      }, 1500);
+      }, 1800);
+    }
+
+    function showPlayButton() {
+      sound.style.display = "block";
+      sound.textContent = soundEnabled
+        ? "▶ Продолжить видео"
+        : "▶ Запустить видео со звуком";
+    }
+
+    async function playTrackedVideo() {
+      if (!targetVisible || document.hidden || soundBusy) return;
+
+      const attempt = ++playbackAttempt;
+
+      try {
+        await video.play();
+
+        if (attempt !== playbackAttempt) return;
+
+        if (!targetVisible || document.hidden) {
+          video.pause();
+          return;
+        }
+
+        if (soundEnabled) {
+          sound.style.display = "none";
+        }
+
+        hideHintLater();
+      } catch (error) {
+        if (attempt !== playbackAttempt || !targetVisible) return;
+
+        showPlayButton();
+        showHint("Нажмите кнопку сверху, чтобы запустить видео");
+        console.error("Ошибка воспроизведения:", error);
+      }
     }
 
     scene.addEventListener("arReady", () => {
       startup.style.display = "none";
-      showHint("Наведите камеру на карточку");
+      showHint("Наведите камеру на коврик, лежащий горизонтально");
     });
 
     scene.addEventListener("arError", () => {
       startup.style.display = "none";
       showHint(
-        "Не удалось запустить камеру. Проверьте разрешение в браузере."
+        "Не удалось запустить AR. Проверьте доступ к камере и обновите страницу."
       );
     });
 
     video.addEventListener("error", () => {
       startup.style.display = "none";
-      showHint(
-        "Видео не загрузилось. Проверьте файл assets/person_packed.mp4"
-      );
+      showHint("Видео не загрузилось. Проверьте интернет и обновите страницу.");
+    });
+
+    video.addEventListener("waiting", () => {
+      if (targetVisible) {
+        showHint("Загружаем видео…");
+      }
+    });
+
+    video.addEventListener("playing", () => {
+      if (targetVisible) {
+        hideHintLater();
+      }
     });
 
     sound.addEventListener("click", async () => {
+      if (soundBusy) return;
+
+      soundBusy = true;
       sound.disabled = true;
+      ++playbackAttempt;
 
       try {
         video.muted = false;
         await video.play();
+        soundEnabled = true;
 
-        if (!targetVisible) {
+        if (!targetVisible || document.hidden) {
           video.pause();
-          video.currentTime = 0;
         } else {
           hideHintLater();
         }
@@ -325,54 +489,44 @@
         sound.style.display = "none";
       } catch (error) {
         video.muted = true;
-        showHint("Нажмите кнопку звука ещё раз");
-        console.error("Не удалось включить звук:", error);
+        soundEnabled = false;
+        showPlayButton();
+        showHint("Не удалось включить звук. Нажмите кнопку ещё раз.");
+        console.error("Ошибка включения звука:", error);
       } finally {
+        soundBusy = false;
         sound.disabled = false;
       }
     });
 
-    target.addEventListener("targetFound", async () => {
+    target.addEventListener("targetFound", () => {
       targetVisible = true;
-      showHint("Карточка найдена");
+      showHint("Коврик найден");
 
-      person.removeAttribute("animation__appear");
-      person.setAttribute("animation__appear", {
-        property: "scale",
-        from: "0.01 0.01 0.01",
-        to: "1 1 1",
-        dur: 380,
-        easing: "easeOutBack"
-      });
-
-      try {
-        video.currentTime = 0;
-        await video.play();
-
-        if (!targetVisible) {
-          video.pause();
-          return;
-        }
-
-        hideHintLater();
-      } catch (error) {
-        if (!targetVisible) return;
-
-        sound.style.display = "block";
-        sound.textContent = "▶ Запустить видео со звуком";
-        showHint("Нажмите кнопку сверху для запуска видео");
-        console.error("Не удалось запустить видео:", error);
-      }
+      // Продолжаем с текущего момента без скачка размера.
+      playTrackedVideo();
     });
 
     target.addEventListener("targetLost", () => {
       targetVisible = false;
+      ++playbackAttempt;
       video.pause();
 
-      person.removeAttribute("animation__appear");
-      person.setAttribute("scale", "0.01 0.01 0.01");
+      showHint("Верните коврик в кадр");
+    });
 
-      showHint("Наведите камеру на карточку");
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        ++playbackAttempt;
+        video.pause();
+      } else if (targetVisible) {
+        playTrackedVideo();
+      }
+    });
+
+    window.addEventListener("pagehide", () => {
+      ++playbackAttempt;
+      video.pause();
     });
   </script>
 </body>
