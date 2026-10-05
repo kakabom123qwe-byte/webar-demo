@@ -37,7 +37,6 @@
       background: transparent !important;
     }
 
-    /* Размер камеры и её смещение рассчитывает MindAR. */
     body > video {
       pointer-events: none;
     }
@@ -121,11 +120,108 @@
   </style>
 
   <script>
-    /*
-      В файле person_packed.mp4:
-      левая половина — цветное изображение,
-      правая половина — маска прозрачности.
-    */
+    // Человек поворачивается к камере вокруг точки у стоп.
+    AFRAME.registerComponent("face-viewer", {
+      init: function () {
+        this.cameraPosition = new AFRAME.THREE.Vector3();
+      },
+
+      tick: function () {
+        const anchor = this.el.parentEl.object3D;
+        const camera = this.el.sceneEl.camera;
+
+        if (!camera || !anchor.visible) return;
+
+        anchor.updateWorldMatrix(true, false);
+
+        const determinant = anchor.matrixWorld.determinant();
+
+        if (
+          !Number.isFinite(determinant) ||
+          Math.abs(determinant) < 1e-8
+        ) return;
+
+        camera.getWorldPosition(this.cameraPosition);
+        anchor.worldToLocal(this.cameraPosition);
+
+        const dx =
+          this.cameraPosition.x - this.el.object3D.position.x;
+        const dy =
+          this.cameraPosition.y - this.el.object3D.position.y;
+
+        if (dx * dx + dy * dy < 0.0025) return;
+
+        this.el.object3D.rotation.z =
+          Math.atan2(dy, dx) + Math.PI / 2;
+      }
+    });
+
+    // Центрирование модели и установка основания на поверхность.
+    AFRAME.registerComponent("ground-model", {
+      schema: {
+        diameter: { default: 0.36 }
+      },
+
+      init: function () {
+        this.loaded = () => {
+          const THREE = AFRAME.THREE;
+          const mesh = this.el.getObject3D("mesh");
+
+          if (!mesh) return;
+
+          const parent = mesh.parent;
+
+          parent.remove(mesh);
+          mesh.updateMatrixWorld(true);
+
+          const box = new THREE.Box3().setFromObject(mesh);
+          const size = box.getSize(new THREE.Vector3());
+          const center = box.getCenter(new THREE.Vector3());
+          const span = Math.hypot(size.x, size.z);
+
+          if (!Number.isFinite(span) || span <= 0) {
+            parent.add(mesh);
+            this.el.emit("model-error", {
+              message: "Invalid model bounds"
+            });
+            return;
+          }
+
+          const scale = this.data.diameter / span;
+
+          mesh.scale.multiplyScalar(scale);
+          mesh.position.set(
+            -center.x * scale,
+            -box.min.y * scale,
+            -center.z * scale
+          );
+
+          parent.add(mesh);
+          mesh.updateMatrixWorld(true);
+        };
+
+        this.el.addEventListener("model-loaded", this.loaded);
+      },
+
+      remove: function () {
+        this.el.removeEventListener("model-loaded", this.loaded);
+      }
+    });
+
+    // Медленное вращение генератора.
+    AFRAME.registerComponent("gentle-spin", {
+      tick: function (time, delta) {
+        if (
+          !document.hidden &&
+          document.querySelector("#target").object3D.visible
+        ) {
+          this.el.object3D.rotation.y +=
+            Math.min(delta || 0, 50) * Math.PI / 20000;
+        }
+      }
+    });
+
+    // В person_packed.mp4 слева находится цвет, справа — маска.
     AFRAME.registerComponent("alpha-video", {
       schema: {
         src: { type: "selector" }
@@ -163,7 +259,6 @@
             varying vec2 vUv;
 
             void main() {
-              // Отступ предотвращает смешивание двух половин.
               float x = clamp(vUv.x, 0.001, 0.999);
 
               vec2 rgbUV = vec2(x * 0.5, vUv.y);
@@ -176,8 +271,6 @@
 
               if (alpha < 0.02) discard;
 
-              // В подготовленном видео цвет уже умножен на маску.
-              // Компенсируем это, чтобы края меньше темнели.
               vec3 color = clamp(
                 rgb / max(mask, 0.08),
                 0.0,
@@ -218,7 +311,7 @@
       }
     });
 
-    // Мягкая декоративная тень на поверхности коврика.
+    // Мягкие декоративные тени на открытке.
     AFRAME.registerComponent("soft-shadow", {
       init: function () {
         const THREE = AFRAME.THREE;
@@ -299,18 +392,18 @@
   </button>
 
   <div id="hint" role="status">
-    Положите картинку коврика на ровную поверхность
+    Положите открытку на стол и держите её целиком в кадре
   </div>
 
   <a-scene
     mindar-image="
-      imageTargetSrc: ./assets/target.mind?v=4;
+      imageTargetSrc: ./assets/target.mind?card=1;
       autoStart: true;
       maxTrack: 1;
-      filterMinCF: 0.0005;
-      filterBeta: 0.001;
-      warmupTolerance: 5;
-      missTolerance: 10;
+      filterMinCF: 0.001;
+      filterBeta: 1000;
+      warmupTolerance: 8;
+      missTolerance: 3;
       uiScanning: no;
     "
     color-space="sRGB"
@@ -344,32 +437,67 @@
     ></a-camera>
 
     <a-entity
+      light="type: ambient; color: #ffffff; intensity: 0.85"
+    ></a-entity>
+
+    <a-entity
+      light="type: directional; color: #fff4e6; intensity: 1.6"
+      position="1 2 2"
+    ></a-entity>
+
+    <a-entity
+      light="type: directional; color: #dbeaff; intensity: 0.65"
+      position="-2 1 0"
+    ></a-entity>
+
+    <a-entity
       id="target"
       mindar-image-target="targetIndex: 0"
     >
-      <!-- Тень лежит в плоскости метки. -->
       <a-plane
-        width="0.42"
-        height="0.24"
-        position="0 0 0.003"
+        width="0.24"
+        height="0.14"
+        position="-0.316667 -0.023810 0.002"
         rotation="0 0 0"
         soft-shadow
       ></a-plane>
 
-      <!--
-        Метка лежит горизонтально.
-        Ось Z метки направлена вверх от поверхности.
-        Поворот на 90 градусов ставит человека вертикально.
-      -->
+      <!-- Человек слева над QR. -->
+      <a-entity
+        id="personPivot"
+        position="-0.316667 -0.023810 0.003"
+        face-viewer
+      >
+        <a-plane
+          id="person"
+          width="0.50625"
+          height="0.90"
+          position="-0.010125 0 0.3825"
+          rotation="90 0 0"
+          alpha-video="src: #personVideo"
+        ></a-plane>
+      </a-entity>
+
+      <!-- Генератор справа на поверхности открытки. -->
       <a-plane
-        id="person"
-        width="0.675"
-        height="1.20"
-        position="0 0 0.50"
-        rotation="90 0 0"
-        scale="1 1 1"
-        alpha-video="src: #personVideo"
+        width="0.39"
+        height="0.32"
+        position="0.22 -0.023810 0.002"
+        soft-shadow
       ></a-plane>
+
+      <a-entity
+        position="0.22 -0.023810 0.003"
+        rotation="90 0 0"
+      >
+        <a-entity gentle-spin rotation="0 20 0">
+          <a-entity
+            id="generator"
+            ground-model="diameter: 0.36"
+            gltf-model="url(./assets/generator.glb)"
+          ></a-entity>
+        </a-entity>
+      </a-entity>
     </a-entity>
   </a-scene>
 
@@ -386,6 +514,8 @@
     let soundEnabled = false;
     let soundBusy = false;
     let playbackAttempt = 0;
+    let playPending = false;
+    let videoFailed = false;
 
     function showHint(message) {
       clearTimeout(hintTimer);
@@ -397,7 +527,7 @@
       clearTimeout(hintTimer);
 
       hintTimer = setTimeout(() => {
-        if (targetVisible && !video.paused) {
+        if (targetVisible && !video.paused && !videoFailed) {
           hint.style.opacity = "0";
         }
       }, 1800);
@@ -411,14 +541,19 @@
     }
 
     async function playTrackedVideo() {
-      if (!targetVisible || document.hidden || soundBusy) return;
+      if (
+        !targetVisible ||
+        document.hidden ||
+        soundBusy ||
+        playPending ||
+        videoFailed
+      ) return;
 
       const attempt = ++playbackAttempt;
+      playPending = true;
 
       try {
         await video.play();
-
-        if (attempt !== playbackAttempt) return;
 
         if (!targetVisible || document.hidden) {
           video.pause();
@@ -431,17 +566,34 @@
 
         hideHintLater();
       } catch (error) {
-        if (attempt !== playbackAttempt || !targetVisible) return;
+        if (
+          attempt !== playbackAttempt ||
+          !targetVisible
+        ) return;
 
         showPlayButton();
         showHint("Нажмите кнопку сверху, чтобы запустить видео");
         console.error("Ошибка воспроизведения:", error);
+      } finally {
+        playPending = false;
+
+        if (
+          attempt !== playbackAttempt &&
+          targetVisible &&
+          !document.hidden &&
+          !soundBusy &&
+          !videoFailed
+        ) {
+          playTrackedVideo();
+        }
       }
     }
 
     scene.addEventListener("arReady", () => {
       startup.style.display = "none";
-      showHint("Наведите камеру на коврик, лежащий горизонтально");
+      showHint(
+        "Наведите камеру на всю горизонтальную панель открытки"
+      );
     });
 
     scene.addEventListener("arError", () => {
@@ -452,8 +604,11 @@
     });
 
     video.addEventListener("error", () => {
+      videoFailed = true;
       startup.style.display = "none";
-      showHint("Видео не загрузилось. Проверьте интернет и обновите страницу.");
+      showHint(
+        "Видео не загрузилось. Проверьте интернет и обновите страницу."
+      );
     });
 
     video.addEventListener("waiting", () => {
@@ -491,7 +646,9 @@
         video.muted = true;
         soundEnabled = false;
         showPlayButton();
-        showHint("Не удалось включить звук. Нажмите кнопку ещё раз.");
+        showHint(
+          "Не удалось включить звук. Нажмите кнопку ещё раз."
+        );
         console.error("Ошибка включения звука:", error);
       } finally {
         soundBusy = false;
@@ -501,9 +658,7 @@
 
     target.addEventListener("targetFound", () => {
       targetVisible = true;
-      showHint("Коврик найден");
-
-      // Продолжаем с текущего момента без скачка размера.
+      showHint("Открытка найдена");
       playTrackedVideo();
     });
 
@@ -511,8 +666,7 @@
       targetVisible = false;
       ++playbackAttempt;
       video.pause();
-
-      showHint("Верните коврик в кадр");
+      showHint("Верните всю открытку в кадр");
     });
 
     document.addEventListener("visibilitychange", () => {
@@ -528,6 +682,15 @@
       ++playbackAttempt;
       video.pause();
     });
+
+    document.querySelector("#generator").addEventListener(
+      "model-error",
+      () => {
+        showHint(
+          "Генератор не загрузился. Проверьте файл assets/generator.glb"
+        );
+      }
+    );
   </script>
 </body>
 </html>
