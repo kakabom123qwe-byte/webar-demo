@@ -4,16 +4,24 @@
   <meta charset="UTF-8">
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1, viewport-fit=cover"
+    content="width=device-width,initial-scale=1,viewport-fit=cover"
   >
-  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#f5f3ee">
 
-  <title>AR — Дмитрий Рогозин</title>
+  <title>Дмитрий Рогозин · Живая открытка</title>
 
-  <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+  <link rel="preconnect" href="https://aframe.io">
+  <link
+    rel="preconnect"
+    href="https://cdn.jsdelivr.net"
+    crossorigin
+  >
 
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     html, body {
       margin: 0;
       width: 100%;
@@ -21,7 +29,7 @@
       overflow: hidden;
       background: transparent;
       font-family: -apple-system, BlinkMacSystemFont,
-        "Segoe UI", Arial, sans-serif;
+        "Segoe UI", sans-serif;
     }
 
     a-scene {
@@ -29,11 +37,7 @@
       inset: 0 !important;
       width: 100% !important;
       height: 100% !important;
-      background: transparent !important;
       z-index: 2;
-    }
-
-    canvas.a-canvas {
       background: transparent !important;
     }
 
@@ -42,792 +46,1103 @@
     }
 
     #personVideo {
-      position: fixed !important;
-      left: -5px !important;
-      top: -5px !important;
-      width: 2px !important;
-      height: 2px !important;
-      opacity: 0.01 !important;
-      pointer-events: none !important;
-      z-index: -1 !important;
+      position: fixed;
+      left: -5px;
+      top: -5px;
+      width: 2px;
+      height: 2px;
+      opacity: 0.01;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    #welcome {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 26px;
+      background:
+        radial-gradient(
+          ellipse at 90% 10%,
+          #dbe5e1,
+          transparent 55%
+        ),
+        #f5f3ee;
+      color: #233a36;
+      transition: opacity 0.35s ease;
+    }
+
+    #welcome.done {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .intro {
+      width: 100%;
+      max-width: 360px;
+      text-align: center;
+    }
+
+    .eyebrow {
+      font-size: 10px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #60736a;
+    }
+
+    .emblem {
+      width: 106px;
+      height: 106px;
+      margin: 34px auto 28px;
+      position: relative;
+      display: grid;
+      place-items: center;
+    }
+
+    .emblem::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border: 1px solid #b5c8bd;
+      border-radius: 50%;
+    }
+
+    .emblem::after {
+      content: "";
+      position: absolute;
+      inset: -8px;
+      border: 2px solid transparent;
+      border-top-color: #8fae9f;
+      border-radius: 50%;
+      animation: orbit 3s linear infinite;
+    }
+
+    .emblem svg {
+      width: 60px;
+      height: 60px;
+    }
+
+    h1 {
+      font-weight: 500;
+      font-size: 38px;
+      line-height: 1.1;
+      letter-spacing: -1.5px;
+      margin: 0 0 18px;
+    }
+
+    .lead {
+      font-size: 15px;
+      line-height: 1.6;
+      color: #62716a;
+      margin: 0 auto 26px;
+      max-width: 290px;
+    }
+
+    #startButton {
+      width: 100%;
+      padding: 17px;
+      border: 0;
+      border-radius: 15px;
+      background: #294b42;
+      color: white;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    #startButton:disabled {
+      opacity: 0.65;
+      cursor: default;
+    }
+
+    #status {
+      min-height: 42px;
+      margin: 17px 0 0;
+      font-size: 13px;
+      line-height: 1.5;
+      color: #62716a;
+    }
+
+    .privacy {
+      font-size: 11px;
+      line-height: 1.6;
+      color: #7b877f;
+      margin-top: 22px;
+    }
+
+    .signature {
+      position: absolute;
+      bottom: calc(26px + env(safe-area-inset-bottom));
+      left: 20px;
+      right: 20px;
+      text-align: center;
+      font-size: 12px;
+      letter-spacing: 1px;
+      color: #738078;
     }
 
     #hint {
       position: fixed;
-      z-index: 1000;
-      left: 50%;
       bottom: calc(22px + env(safe-area-inset-bottom));
+      left: 50%;
       transform: translateX(-50%);
-      box-sizing: border-box;
-      width: max-content;
+      z-index: 500;
       max-width: calc(100vw - 32px);
+      width: max-content;
       padding: 12px 18px;
       border-radius: 18px;
-      background: rgba(0, 0, 0, 0.58);
+      background: rgba(27, 43, 38, 0.78);
       backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
       color: white;
-      font-size: 14px;
-      line-height: 1.4;
+      font-size: 13px;
       text-align: center;
       pointer-events: none;
-      transition: opacity 0.25s ease;
+      transition: opacity 0.25s;
+      opacity: 0;
     }
 
     #sound {
       position: fixed;
-      z-index: 1100;
       top: calc(16px + env(safe-area-inset-top));
       left: 50%;
       transform: translateX(-50%);
-      max-width: calc(100vw - 32px);
+      z-index: 500;
       border: 0;
-      border-radius: 18px;
+      border-radius: 16px;
+      background: #fffffff2;
+      color: #233a36;
       padding: 13px 20px;
-      background: rgba(255, 255, 255, 0.96);
-      color: #111;
       font-size: 14px;
       font-weight: 600;
-      box-shadow: 0 5px 22px rgba(0, 0, 0, 0.18);
-      cursor: pointer;
+      box-shadow: 0 4px 22px #0002;
+      display: none;
     }
 
-    #sound:disabled {
-      opacity: 0.65;
+    @keyframes orbit {
+      to {
+        transform: rotate(360deg);
+      }
     }
 
-    #startup {
-      position: fixed;
-      inset: 0;
-      z-index: 900;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
+    @media (prefers-reduced-motion: reduce) {
+      .emblem::after {
+        animation: none;
+      }
     }
 
-    #startupBox {
-      max-width: 280px;
-      margin: 20px;
-      padding: 16px 22px;
-      border-radius: 20px;
-      background: rgba(0, 0, 0, 0.58);
-      color: white;
-      font-size: 15px;
-      text-align: center;
-      line-height: 1.5;
+    @media (max-height: 620px) {
+      .emblem {
+        margin: 12px auto;
+        width: 70px;
+        height: 70px;
+      }
+
+      h1 {
+        font-size: 30px;
+      }
+
+      .signature {
+        display: none;
+      }
+
+      .privacy {
+        margin-top: 10px;
+      }
     }
   </style>
-
-  <script>
-    /*
-      Все моменты привязаны к времени исходного видео.
-      Потеря метки и пауза не сдвигают появление генератора.
-    */
-    const AR_SETTINGS = {
-      generatorStart: 53,
-      appearanceDuration: 0.8,
-      turnDuration: 8,
-      startAngle: -15,
-      endAngle: 15
-    };
-
-    // Поворот видеоплоскости вокруг точки у стоп.
-    AFRAME.registerComponent("face-viewer", {
-      init: function () {
-        this.cameraPosition = new AFRAME.THREE.Vector3();
-      },
-
-      tick: function () {
-        const anchor = this.el.parentEl.object3D;
-        const camera = this.el.sceneEl.camera;
-
-        if (!camera || !anchor.visible) return;
-
-        anchor.updateWorldMatrix(true, false);
-
-        const determinant = anchor.matrixWorld.determinant();
-
-        if (
-          !Number.isFinite(determinant) ||
-          Math.abs(determinant) < 1e-8
-        ) return;
-
-        camera.getWorldPosition(this.cameraPosition);
-        anchor.worldToLocal(this.cameraPosition);
-
-        const dx =
-          this.cameraPosition.x - this.el.object3D.position.x;
-        const dy =
-          this.cameraPosition.y - this.el.object3D.position.y;
-
-        if (dx * dx + dy * dy < 0.0025) return;
-
-        this.el.object3D.rotation.z =
-          Math.atan2(dy, dx) + Math.PI / 2;
-      }
-    });
-
-    // Установка основания генератора на поверхность.
-    AFRAME.registerComponent("ground-model", {
-      schema: {
-        diameter: { default: 0.27 }
-      },
-
-      init: function () {
-        this.loaded = () => {
-          const THREE = AFRAME.THREE;
-          const mesh = this.el.getObject3D("mesh");
-
-          if (!mesh || this.normalizedMesh === mesh) return;
-
-          const parent = mesh.parent;
-          if (!parent) return;
-
-          parent.remove(mesh);
-          mesh.updateMatrixWorld(true);
-
-          const box = new THREE.Box3().setFromObject(mesh);
-          const size = box.getSize(new THREE.Vector3());
-          const center = box.getCenter(new THREE.Vector3());
-          const span = Math.hypot(size.x, size.z);
-
-          if (!Number.isFinite(span) || span <= 0) {
-            parent.add(mesh);
-            this.el.emit("model-error", {
-              message: "Invalid model bounds"
-            });
-            return;
-          }
-
-          const scale = this.data.diameter / span;
-
-          mesh.scale.multiplyScalar(scale);
-          mesh.position.multiplyScalar(scale);
-          mesh.position.x -= center.x * scale;
-          mesh.position.y -= box.min.y * scale;
-          mesh.position.z -= center.z * scale;
-
-          parent.add(mesh);
-          mesh.updateMatrixWorld(true);
-
-          this.normalizedMesh = mesh;
-        };
-
-        this.el.addEventListener("model-loaded", this.loaded);
-
-        if (this.el.getObject3D("mesh")) {
-          this.loaded();
-        }
-      },
-
-      remove: function () {
-        this.el.removeEventListener("model-loaded", this.loaded);
-      }
-    });
-
-    /*
-      Генератор скрыт до 53-й секунды.
-      Появляется плавным увеличением от основания.
-      Поворачивается один раз и останавливается.
-      При повторе видео снова скрывается.
-    */
-    AFRAME.registerComponent("video-cue", {
-      schema: {
-        video: { type: "selector" },
-        turn: { type: "selector" }
-      },
-
-      init: function () {
-        this.el.object3D.visible = false;
-      },
-
-      tick: function () {
-        const video = this.data.video;
-        if (!video) return;
-
-        const elapsed =
-          video.currentTime - AR_SETTINGS.generatorStart;
-
-        if (!Number.isFinite(elapsed) || elapsed < 0) {
-          this.el.object3D.visible = false;
-          return;
-        }
-
-        this.el.object3D.visible = true;
-
-        const progress = Math.min(
-          1,
-          elapsed / AR_SETTINGS.appearanceDuration
-        );
-
-        const eased =
-          progress * progress * (3 - 2 * progress);
-
-        this.el.object3D.scale.setScalar(
-          Math.max(0.001, eased)
-        );
-
-        if (this.data.turn) {
-          const turnProgress = Math.min(
-            1,
-            Math.max(
-              0,
-              (elapsed - AR_SETTINGS.appearanceDuration) /
-                AR_SETTINGS.turnDuration
-            )
-          );
-
-          const smoothTurn =
-            turnProgress * turnProgress *
-            (3 - 2 * turnProgress);
-
-          const degrees =
-            AR_SETTINGS.startAngle +
-            (AR_SETTINGS.endAngle - AR_SETTINGS.startAngle) *
-              smoothTurn;
-
-          this.data.turn.object3D.rotation.y =
-            degrees * Math.PI / 180;
-        }
-      }
-    });
-
-    // Видео: слева цвет, справа маска прозрачности.
-    AFRAME.registerComponent("alpha-video", {
-      schema: {
-        src: { type: "selector" }
-      },
-
-      init: function () {
-        const THREE = AFRAME.THREE;
-
-        this.texture = new THREE.VideoTexture(this.data.src);
-        this.texture.minFilter = THREE.LinearFilter;
-        this.texture.magFilter = THREE.LinearFilter;
-        this.texture.generateMipmaps = false;
-
-        this.material = new THREE.ShaderMaterial({
-          uniforms: {
-            videoMap: { value: this.texture }
-          },
-
-          vertexShader: `
-            varying vec2 vUv;
-
-            void main() {
-              vUv = uv;
-              gl_Position = projectionMatrix
-                * modelViewMatrix
-                * vec4(position, 1.0);
-            }
-          `,
-
-          fragmentShader: `
-            precision highp float;
-
-            uniform sampler2D videoMap;
-            varying vec2 vUv;
-
-            void main() {
-              float x = clamp(vUv.x, 0.001, 0.999);
-
-              vec2 rgbUV = vec2(x * 0.5, vUv.y);
-              vec2 maskUV = vec2(0.5 + x * 0.5, vUv.y);
-
-              vec3 rgb = texture2D(videoMap, rgbUV).rgb;
-              float mask = texture2D(videoMap, maskUV).r;
-
-              float alpha = smoothstep(0.08, 0.85, mask);
-
-              if (alpha < 0.02) discard;
-
-              vec3 color = clamp(
-                rgb / max(mask, 0.08),
-                0.0,
-                1.0
-              );
-
-              gl_FragColor = vec4(color, alpha);
-            }
-          `,
-
-          transparent: true,
-          depthWrite: false,
-          depthTest: true,
-          side: THREE.DoubleSide
-        });
-
-        this.applyMaterial = () => {
-          const mesh = this.el.getObject3D("mesh");
-
-          if (mesh) {
-            mesh.material = this.material;
-            mesh.renderOrder = 2;
-          }
-        };
-
-        this.applyMaterial();
-        this.el.addEventListener("object3dset", this.applyMaterial);
-      },
-
-      remove: function () {
-        this.el.removeEventListener(
-          "object3dset",
-          this.applyMaterial
-        );
-
-        if (this.texture) this.texture.dispose();
-        if (this.material) this.material.dispose();
-      }
-    });
-
-    // Мягкая декоративная тень.
-    AFRAME.registerComponent("soft-shadow", {
-      init: function () {
-        const THREE = AFRAME.THREE;
-
-        this.material = new THREE.ShaderMaterial({
-          vertexShader: `
-            varying vec2 vUv;
-
-            void main() {
-              vUv = uv;
-              gl_Position = projectionMatrix
-                * modelViewMatrix
-                * vec4(position, 1.0);
-            }
-          `,
-
-          fragmentShader: `
-            precision mediump float;
-            varying vec2 vUv;
-
-            void main() {
-              vec2 p = (vUv - 0.5) * 2.0;
-              float opacity =
-                1.0 - smoothstep(0.05, 1.0, length(p));
-
-              opacity = opacity * opacity * 0.26;
-
-              if (opacity < 0.002) discard;
-
-              gl_FragColor = vec4(0.0, 0.0, 0.0, opacity);
-            }
-          `,
-
-          transparent: true,
-          depthWrite: false,
-          depthTest: true,
-          side: THREE.DoubleSide
-        });
-
-        this.applyMaterial = () => {
-          const mesh = this.el.getObject3D("mesh");
-
-          if (mesh) {
-            mesh.material = this.material;
-            mesh.renderOrder = 1;
-          }
-        };
-
-        this.applyMaterial();
-        this.el.addEventListener("object3dset", this.applyMaterial);
-      },
-
-      remove: function () {
-        this.el.removeEventListener(
-          "object3dset",
-          this.applyMaterial
-        );
-
-        if (this.material) this.material.dispose();
-      }
-    });
-  </script>
 </head>
 
 <body>
-  <div id="startup">
-    <div id="startupBox">
-      Запускаем AR…<br>
-      Разрешите доступ к камере
+  <div id="welcome">
+    <div class="intro">
+      <div class="eyebrow">
+        Бумага. Камера. Встреча.
+      </div>
+
+      <div class="emblem" aria-hidden="true">
+        <svg
+          viewBox="0 0 64 64"
+          fill="none"
+          stroke="#476d5c"
+          stroke-width="1.5"
+        >
+          <path
+            d="M10 24V10h14M40 10h14v14M54 40v14H40M24 54H10V40"
+          />
+          <path
+            d="M22 22h20v20H22zM22 32h20M32 22v20"
+            opacity=".5"
+          />
+          <circle
+            cx="32"
+            cy="32"
+            r="4"
+            fill="#476d5c"
+            stroke="none"
+          />
+        </svg>
+      </div>
+
+      <h1>Давайте<br>познакомимся.</h1>
+
+      <p class="lead">
+        Разрешите камеру и наведите её на открытку.
+        Встреча начнётся прямо на бумаге.
+      </p>
+
+      <button id="startButton" type="button">
+        Открыть камеру
+      </button>
+
+      <p id="status" role="status">
+        Сейчас браузер запросит доступ к камере.
+      </p>
+
+      <div class="privacy">
+        Микрофон не нужен.<br>
+        Изображение камеры обрабатывается на устройстве.
+      </div>
+    </div>
+
+    <div class="signature">
+      ДМИТРИЙ РОГОЗИН
     </div>
   </div>
 
   <button id="sound" type="button">
-    🔊 Включить звук
+    Включить звук
   </button>
 
-  <div id="hint" role="status">
-    Наведите камеру на панель открытки с QR
-  </div>
+  <div id="hint" role="status"></div>
 
-  <a-scene
-    mindar-image="
-      imageTargetSrc: ./assets/target.mind?card=1;
-      autoStart: true;
-      maxTrack: 1;
-      filterMinCF: 0.001;
-      filterBeta: 1000;
-      warmupTolerance: 8;
-      missTolerance: 3;
-      uiScanning: no;
-    "
-    color-space="sRGB"
-    renderer="
-      colorManagement: true;
-      alpha: true;
-      antialias: true;
-    "
-    vr-mode-ui="enabled: false"
-    device-orientation-permission-ui="enabled: false"
-    loading-screen="enabled: false"
-    embedded
-  >
-    <a-assets timeout="30000">
-      <video
-        id="personVideo"
-        src="./assets/person_packed.mp4"
-        preload="auto"
-        playsinline
-        webkit-playsinline
-        crossorigin="anonymous"
-        loop
-        muted
-      ></video>
-    </a-assets>
-
-    <a-camera
-      position="0 0 0"
-      look-controls="enabled: false"
-      wasd-controls="enabled: false"
-    ></a-camera>
-
-    <a-entity
-      light="type: ambient; color: #ffffff; intensity: 0.85"
-    ></a-entity>
-
-    <a-entity
-      light="type: directional; color: #fff4e6; intensity: 1.6"
-      position="1 2 2"
-    ></a-entity>
-
-    <a-entity
-      light="type: directional; color: #dbeaff; intensity: 0.65"
-      position="-2 1 0"
-    ></a-entity>
-
-    <a-entity
-      id="target"
-      mindar-image-target="targetIndex: 0"
-    >
-      <!-- Тень у стоп в центре QR. -->
-      <a-plane
-        width="0.192"
-        height="0.112"
-        position="-0.316667 -0.023810 0.002"
-        soft-shadow
-      ></a-plane>
-
-      <!-- Масштабирование вокруг стоп сохраняет точку опоры. -->
-      <a-entity
-        id="personPivot"
-        position="-0.316667 -0.023810 0.003"
-        scale="0.8 0.8 0.8"
-        face-viewer
-      >
-        <a-plane
-          id="person"
-          width="0.50625"
-          height="0.90"
-          position="-0.010125 0 0.3825"
-          rotation="90 0 0"
-          alpha-video="src: #personVideo"
-        ></a-plane>
-      </a-entity>
-
-      <!--
-        Генератор по правую руку человека:
-        слева для зрителя, смотрящего на открытку спереди.
-        Его положение закреплено относительно метки.
-      -->
-      <a-entity
-        id="generatorStage"
-        position="-0.64 -0.023810 0"
-        visible="false"
-        video-cue="video: #personVideo; turn: #generatorTurn"
-      >
-        <a-plane
-          width="0.2925"
-          height="0.24"
-          position="0 0 0.002"
-          soft-shadow
-        ></a-plane>
-
-        <!-- Перевод вертикальной оси модели в вертикаль метки. -->
-        <a-entity
-          position="0 0 0.003"
-          rotation="90 0 0"
-        >
-          <a-entity id="generatorTurn" rotation="0 -15 0">
-            <a-entity
-              id="generator"
-              ground-model="diameter: 0.27"
-              gltf-model="url(./assets/generator.glb)"
-            ></a-entity>
-          </a-entity>
-        </a-entity>
-      </a-entity>
-    </a-entity>
-  </a-scene>
+  <!-- Видео больше не блокирует запуск AR-сцены. -->
+  <video
+    id="personVideo"
+    src="./assets/person_packed.mp4"
+    preload="metadata"
+    playsinline
+    webkit-playsinline
+    crossorigin="anonymous"
+    loop
+    muted
+  ></video>
 
   <script>
-    const scene = document.querySelector("a-scene");
     const video = document.querySelector("#personVideo");
-    const target = document.querySelector("#target");
+    const welcome = document.querySelector("#welcome");
+    const startButton = document.querySelector("#startButton");
+    const statusText = document.querySelector("#status");
     const hint = document.querySelector("#hint");
     const sound = document.querySelector("#sound");
-    const startup = document.querySelector("#startup");
-    const generator = document.querySelector("#generator");
 
-    let targetVisible = false;
-    let soundEnabled = false;
-    let soundBusy = false;
+    let scene;
+    let tracked = false;
+    let starting = false;
+    let running = false;
     let playPending = false;
-    let videoFailed = false;
+    let soundBusy = false;
+    let soundEnabled = false;
+    let hintTimer;
     let modelFailed = false;
-    let hintTimer = null;
-    let playbackAttempt = 0;
 
-    function showHint(message) {
+    function showHint(text, temporary = false) {
       clearTimeout(hintTimer);
-      hint.textContent = message;
+      hint.textContent = text;
       hint.style.opacity = "1";
+
+      if (temporary) {
+        hintTimer = setTimeout(() => {
+          if (tracked) {
+            hint.style.opacity = "0";
+          }
+        }, 2200);
+      }
     }
 
-    function showModelErrorIfNeeded() {
-      if (
-        targetVisible &&
-        modelFailed &&
-        video.currentTime >= AR_SETTINGS.generatorStart
-      ) {
-        showHint(
-          "Генератор не загрузился. Проверьте файл assets/generator.glb"
+    function loadScript(url) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = url;
+        script.onload = resolve;
+
+        script.onerror = () => reject(
+          new Error(
+            "Не удалось загрузить AR. Проверьте интернет."
+          )
         );
-        return true;
+
+        document.head.appendChild(script);
+      });
+    }
+
+    function registerComponents() {
+      const T = AFRAME.THREE;
+
+      /*
+        Отдельная сглаженная опора для всей сцены.
+        Человек и генератор используют одну систему координат.
+      */
+      AFRAME.registerComponent("stable-anchor", {
+        init() {
+          this.raw = document.querySelector("#rawTarget");
+          this.p = new T.Vector3();
+          this.q = new T.Quaternion();
+          this.s = new T.Vector3();
+          this.ready = false;
+          this.el.object3D.visible = false;
+        },
+
+        tick(time, delta) {
+          const raw = this.raw.object3D;
+          const out = this.el.object3D;
+
+          if (!tracked || !raw.visible) {
+            out.visible = false;
+            this.ready = false;
+            return;
+          }
+
+          raw.matrix.decompose(this.p, this.q, this.s);
+
+          const values = [
+            ...this.p.toArray(),
+            ...this.q.toArray(),
+            ...this.s.toArray()
+          ];
+
+          if (!values.every(Number.isFinite)) return;
+
+          if (!this.ready) {
+            out.position.copy(this.p);
+            out.quaternion.copy(this.q);
+            out.scale.copy(this.s);
+            this.ready = true;
+          } else {
+            const dt = Math.min(
+              (delta || 16.7) / 1000,
+              0.05
+            );
+
+            const unit = Math.max(
+              Math.abs(this.s.x),
+              1e-6
+            );
+
+            const distance =
+              out.position.distanceTo(this.p) / unit;
+
+            const angle =
+              out.quaternion.angleTo(this.q);
+
+            /*
+              Малые отклонения фильтруем сильнее.
+              При заметном движении камеры реагируем быстрее.
+            */
+            const moving =
+              distance > 0.035 || angle > 0.10;
+
+            const alpha =
+              1 - Math.exp(
+                -dt / (moving ? 0.045 : 0.14)
+              );
+
+            if (distance > 0.002) {
+              out.position.lerp(this.p, alpha);
+            }
+
+            if (angle > 0.009) {
+              out.quaternion.slerp(this.q, alpha);
+            }
+
+            if (
+              out.scale.distanceTo(this.s) / unit > 0.003
+            ) {
+              out.scale.lerp(this.s, alpha);
+            }
+          }
+
+          out.visible = true;
+        }
+      });
+
+      /*
+        Поворот к зрителю вокруг стоп.
+        Мелкие довороты дополнительно сглаживаются.
+      */
+      AFRAME.registerComponent("face-viewer", {
+        init() {
+          this.p = new T.Vector3();
+          this.ready = false;
+        },
+
+        tick(time, delta) {
+          const anchor = this.el.parentEl.object3D;
+          const camera = this.el.sceneEl.camera;
+
+          if (!camera || !anchor.visible) {
+            this.ready = false;
+            return;
+          }
+
+          anchor.updateWorldMatrix(true, false);
+
+          if (
+            Math.abs(anchor.matrixWorld.determinant()) < 1e-8
+          ) return;
+
+          camera.getWorldPosition(this.p);
+          anchor.worldToLocal(this.p);
+
+          const dx =
+            this.p.x - this.el.object3D.position.x;
+
+          const dy =
+            this.p.y - this.el.object3D.position.y;
+
+          if (dx * dx + dy * dy < 0.0025) return;
+
+          const desired =
+            Math.atan2(dy, dx) + Math.PI / 2;
+
+          const obj = this.el.object3D;
+
+          if (!this.ready) {
+            obj.rotation.z = desired;
+            this.ready = true;
+            return;
+          }
+
+          const diff = Math.atan2(
+            Math.sin(desired - obj.rotation.z),
+            Math.cos(desired - obj.rotation.z)
+          );
+
+          if (Math.abs(diff) > 0.017) {
+            obj.rotation.z += diff * (
+              1 - Math.exp(
+                -Math.min(delta || 16.7, 50) / 110
+              )
+            );
+          }
+        }
+      });
+
+      // Установка основания генератора на поверхность.
+      AFRAME.registerComponent("ground-model", {
+        init() {
+          this.onLoad = () => {
+            const mesh = this.el.getObject3D("mesh");
+
+            if (!mesh || this.normalized === mesh) return;
+
+            const parent = mesh.parent;
+
+            parent.remove(mesh);
+            mesh.updateMatrixWorld(true);
+
+            const box = new T.Box3().setFromObject(mesh);
+            const size = box.getSize(new T.Vector3());
+            const center = box.getCenter(new T.Vector3());
+            const span = Math.hypot(size.x, size.z);
+
+            if (!(span > 0) || !Number.isFinite(span)) {
+              parent.add(mesh);
+              return;
+            }
+
+            const k = 0.27 / span;
+
+            mesh.scale.multiplyScalar(k);
+            mesh.position.multiplyScalar(k);
+
+            mesh.position.sub(
+              new T.Vector3(
+                center.x,
+                box.min.y,
+                center.z
+              ).multiplyScalar(k)
+            );
+
+            parent.add(mesh);
+            this.normalized = mesh;
+          };
+
+          this.el.addEventListener(
+            "model-loaded",
+            this.onLoad
+          );
+        },
+
+        remove() {
+          this.el.removeEventListener(
+            "model-loaded",
+            this.onLoad
+          );
+        }
+      });
+
+      // Появление строго по времени видео.
+      AFRAME.registerComponent("video-cue", {
+        init() {
+          this.el.object3D.visible = false;
+        },
+
+        tick() {
+          const elapsed = video.currentTime - 53;
+          const obj = this.el.object3D;
+
+          obj.visible = elapsed >= 0;
+
+          if (elapsed < 0) return;
+
+          const p = Math.min(1, elapsed / 0.8);
+
+          obj.scale.setScalar(
+            Math.max(
+              0.001,
+              p * p * (3 - 2 * p)
+            )
+          );
+
+          const turn =
+            document.querySelector("#generatorTurn");
+
+          const r = Math.min(
+            1,
+            Math.max(0, (elapsed - 0.8) / 8)
+          );
+
+          if (turn) {
+            turn.object3D.rotation.y =
+              (
+                -15 +
+                30 * r * r * (3 - 2 * r)
+              ) * Math.PI / 180;
+          }
+        }
+      });
+
+      const vertex = `
+        varying vec2 vUv;
+
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix
+            * modelViewMatrix
+            * vec4(position, 1.0);
+        }
+      `;
+
+      function shaderComponent(isVideo) {
+        return {
+          init() {
+            if (isVideo) {
+              this.texture = new T.VideoTexture(video);
+              this.texture.minFilter = T.LinearFilter;
+              this.texture.magFilter = T.LinearFilter;
+              this.texture.generateMipmaps = false;
+            }
+
+            this.material = new T.ShaderMaterial({
+              uniforms: isVideo
+                ? { videoMap: { value: this.texture } }
+                : {},
+
+              vertexShader: vertex,
+
+              fragmentShader: isVideo ? `
+                precision highp float;
+                varying vec2 vUv;
+                uniform sampler2D videoMap;
+
+                void main() {
+                  float x = clamp(vUv.x, .001, .999);
+
+                  vec3 rgb = texture2D(
+                    videoMap,
+                    vec2(x * .5, vUv.y)
+                  ).rgb;
+
+                  float mask = texture2D(
+                    videoMap,
+                    vec2(.5 + x * .5, vUv.y)
+                  ).r;
+
+                  float a = smoothstep(.08, .85, mask);
+
+                  if (a < .02) discard;
+
+                  gl_FragColor = vec4(
+                    clamp(rgb / max(mask, .08), 0., 1.),
+                    a
+                  );
+                }
+              ` : `
+                precision mediump float;
+                varying vec2 vUv;
+
+                void main() {
+                  float a = 1. - smoothstep(
+                    .05,
+                    1.,
+                    length((vUv - .5) * 2.)
+                  );
+
+                  a = a * a * .26;
+
+                  if (a < .002) discard;
+
+                  gl_FragColor = vec4(0., 0., 0., a);
+                }
+              `,
+
+              transparent: true,
+              depthWrite: false,
+              depthTest: true,
+              side: T.DoubleSide
+            });
+
+            this.apply = () => {
+              const mesh = this.el.getObject3D("mesh");
+
+              if (mesh) {
+                mesh.material = this.material;
+                mesh.renderOrder = isVideo ? 2 : 1;
+              }
+            };
+
+            this.apply();
+
+            this.el.addEventListener(
+              "object3dset",
+              this.apply
+            );
+          },
+
+          remove() {
+            this.el.removeEventListener(
+              "object3dset",
+              this.apply
+            );
+
+            this.material.dispose();
+
+            if (this.texture) {
+              this.texture.dispose();
+            }
+          }
+        };
       }
 
-      return false;
+      AFRAME.registerComponent(
+        "alpha-video",
+        shaderComponent(true)
+      );
+
+      AFRAME.registerComponent(
+        "soft-shadow",
+        shaderComponent(false)
+      );
     }
 
-    function hideHintLater() {
-      clearTimeout(hintTimer);
+    /*
+      Загрузка библиотек идёт параллельно
+      с ранним запросом камеры.
+    */
+    const libraries = loadScript(
+      "https://aframe.io/releases/1.4.1/aframe.min.js"
+    )
+      .then(() => loadScript(
+        "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"
+      ))
+      .then(registerComponents);
 
-      hintTimer = setTimeout(() => {
-        if (showModelErrorIfNeeded()) return;
+    libraries.catch(() => {});
 
-        if (targetVisible && !video.paused && !videoFailed) {
-          hint.style.opacity = "0";
-        }
-      }, 1800);
-    }
-
-    function showPlayButton() {
-      sound.style.display = "block";
-      sound.textContent = soundEnabled
-        ? "▶ Продолжить видео"
-        : "▶ Запустить видео со звуком";
-    }
-
-    async function playTrackedVideo() {
+    async function playVideo() {
       if (
-        !targetVisible ||
+        !tracked ||
         document.hidden ||
-        soundBusy ||
         playPending ||
-        videoFailed
+        soundBusy ||
+        video.error
       ) return;
 
-      const attempt = ++playbackAttempt;
       playPending = true;
 
       try {
         await video.play();
 
-        if (!targetVisible || document.hidden) {
+        if (!tracked || document.hidden) {
           video.pause();
-          return;
         }
-
-        if (soundEnabled) {
-          sound.style.display = "none";
-        }
-
-        hideHintLater();
-      } catch (error) {
+      } catch (e) {
         if (
-          attempt !== playbackAttempt ||
-          !targetVisible ||
-          document.hidden
-        ) return;
-
-        showPlayButton();
-        showHint(
-          "Нажмите кнопку сверху, чтобы запустить видео"
-        );
-
-        console.error("Ошибка воспроизведения:", error);
+          tracked &&
+          !document.hidden &&
+          e.name !== "AbortError"
+        ) {
+          sound.style.display = "block";
+          sound.textContent = "Запустить видео";
+        }
       } finally {
         playPending = false;
-
-        if (
-          attempt !== playbackAttempt &&
-          targetVisible &&
-          !document.hidden &&
-          !soundBusy &&
-          !videoFailed
-        ) {
-          playTrackedVideo();
-        }
       }
     }
 
-    scene.addEventListener("arReady", () => {
-      startup.style.display = "none";
-      showHint(
-        "Держите всю панель с QR в кадре и положите её ровно"
-      );
-    });
+    sound.onclick = async () => {
+      if (soundBusy) return;
 
-    scene.addEventListener("arError", () => {
-      startup.style.display = "none";
-      showHint(
-        "Не удалось запустить AR. Проверьте доступ к камере и обновите страницу."
-      );
-    });
+      soundBusy = true;
+      sound.disabled = true;
+      video.muted = false;
 
-    video.addEventListener("error", () => {
-      videoFailed = true;
-      startup.style.display = "none";
-      showHint(
-        "Видео не загрузилось. Проверьте интернет и обновите страницу."
-      );
-    });
+      try {
+        await video.play();
 
-    video.addEventListener("waiting", () => {
-      if (targetVisible && !videoFailed) {
-        showHint("Загружаем видео…");
+        soundEnabled = true;
+        sound.style.display = "none";
+
+        if (!tracked || document.hidden) {
+          video.pause();
+        }
+      } catch (e) {
+        video.muted = true;
+        soundEnabled = false;
+        sound.textContent = "Включить звук";
+      } finally {
+        soundBusy = false;
+        sound.disabled = false;
       }
-    });
+    };
+
+    function showError(message) {
+      welcome.classList.remove("done");
+      welcome.hidden = false;
+      statusText.textContent = message;
+      startButton.disabled = false;
+      startButton.textContent = "Попробовать снова";
+      startButton.onclick = () => location.reload();
+    }
+
+    function createScene() {
+      const holder = document.createElement("div");
+
+      holder.innerHTML = `
+        <a-scene
+          embedded
+          mindar-image="
+            imageTargetSrc: ./assets/target.mind?card=1;
+            autoStart: false;
+            maxTrack: 1;
+            filterMinCF: 0.001;
+            filterBeta: 1000;
+            warmupTolerance: 8;
+            missTolerance: 3;
+            uiScanning: no;
+            uiLoading: no;
+            uiError: no;
+          "
+          renderer="
+            alpha: true;
+            antialias: true;
+            colorManagement: true;
+          "
+          color-space="sRGB"
+          vr-mode-ui="enabled: false"
+          device-orientation-permission-ui="enabled: false"
+          loading-screen="enabled: false"
+        >
+          <a-camera
+            position="0 0 0"
+            look-controls="enabled: false"
+            wasd-controls="enabled: false"
+          ></a-camera>
+
+          <a-entity
+            light="
+              type: ambient;
+              color: #ffffff;
+              intensity: 0.85
+            "
+          ></a-entity>
+
+          <a-entity
+            light="
+              type: directional;
+              color: #fff4e6;
+              intensity: 1.6
+            "
+            position="1 2 2"
+          ></a-entity>
+
+          <a-entity
+            light="
+              type: directional;
+              color: #dbeaff;
+              intensity: 0.65
+            "
+            position="-2 1 0"
+          ></a-entity>
+
+          <!-- Исходная опора MindAR без видимых объектов. -->
+          <a-entity
+            id="rawTarget"
+            mindar-image-target="targetIndex: 0"
+          ></a-entity>
+
+          <!-- Общая сглаженная опора всей композиции. -->
+          <a-entity
+            id="stableRoot"
+            stable-anchor
+            visible="false"
+          >
+            <a-plane
+              width=".192"
+              height=".112"
+              position="-.316667 -.023810 .002"
+              soft-shadow
+            ></a-plane>
+
+            <a-entity
+              position="-.316667 -.023810 .003"
+              scale=".8 .8 .8"
+              face-viewer
+            >
+              <a-plane
+                width=".50625"
+                height=".90"
+                position="-.010125 0 .3825"
+                rotation="90 0 0"
+                alpha-video
+              ></a-plane>
+            </a-entity>
+
+            <a-entity
+              position="-.64 -.023810 0"
+              video-cue
+              visible="false"
+            >
+              <a-plane
+                width=".2925"
+                height=".24"
+                position="0 0 .002"
+                soft-shadow
+              ></a-plane>
+
+              <a-entity
+                position="0 0 .003"
+                rotation="90 0 0"
+              >
+                <a-entity
+                  id="generatorTurn"
+                  rotation="0 -15 0"
+                >
+                  <a-entity
+                    id="generator"
+                    ground-model
+                    gltf-model="url(./assets/generator.glb)"
+                  ></a-entity>
+                </a-entity>
+              </a-entity>
+            </a-entity>
+          </a-entity>
+        </a-scene>
+      `;
+
+      scene = holder.firstElementChild;
+
+      const ready = new Promise(resolve => {
+        scene.addEventListener(
+          "loaded",
+          resolve,
+          { once: true }
+        );
+      });
+
+      scene.addEventListener("arReady", () => {
+        running = true;
+        welcome.classList.add("done");
+
+        sound.style.display =
+          soundEnabled ? "none" : "block";
+
+        showHint(
+          "Положите панель с QR ровно и держите её целиком в кадре"
+        );
+
+        video.preload = "auto";
+      });
+
+      scene.addEventListener("arError", () => {
+        showError(
+          "Камера или AR не запустились. Проверьте разрешение камеры и интернет."
+        );
+      });
+
+      scene.querySelector("#rawTarget").addEventListener(
+        "targetFound",
+        () => {
+          tracked = true;
+          showHint("Открытка найдена", true);
+          playVideo();
+        }
+      );
+
+      scene.querySelector("#rawTarget").addEventListener(
+        "targetLost",
+        () => {
+          tracked = false;
+          video.pause();
+          showHint("Верните панель с QR в кадр");
+        }
+      );
+
+      scene.querySelector("#generator").addEventListener(
+        "model-error",
+        () => {
+          modelFailed = true;
+        }
+      );
+
+      document.body.appendChild(scene);
+
+      return ready;
+    }
+
+    async function start() {
+      if (starting || running) return;
+
+      starting = true;
+      startButton.disabled = true;
+      startButton.textContent = "Открываем камеру…";
+
+      let permissionStream;
+
+      try {
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error(
+            "Откройте страницу в Safari или Chrome через HTTPS."
+          );
+        }
+
+        /*
+          Запрос камеры до загрузки AR и видео.
+          Микрофон не запрашивается.
+        */
+        permissionStream =
+          await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: {
+              facingMode: "environment"
+            }
+          });
+
+        statusText.textContent =
+          "Камера разрешена. Подготавливаем открытку…";
+
+        await libraries;
+        await createScene();
+
+        /*
+          Освобождаем камеру перед передачей
+          управления библиотеке MindAR.
+        */
+        permissionStream.getTracks().forEach(track => {
+          track.stop();
+        });
+
+        permissionStream = null;
+
+        statusText.textContent =
+          "Наведите камеру на панель с QR.";
+
+        await scene.systems["mindar-image-system"].start();
+      } catch (error) {
+        const denied =
+          error.name === "NotAllowedError";
+
+        showError(
+          denied
+            ? "Разрешите камеру в настройках сайта, затем повторите запуск."
+            : error.message || "Не удалось запустить AR."
+        );
+      } finally {
+        if (permissionStream) {
+          permissionStream.getTracks().forEach(track => {
+            track.stop();
+          });
+        }
+
+        starting = false;
+      }
+    }
 
     video.addEventListener("playing", () => {
-      if (!targetVisible || document.hidden) {
+      if (!tracked || document.hidden) {
         video.pause();
         return;
       }
 
-      hideHintLater();
-    });
-
-    video.addEventListener("timeupdate", () => {
-      showModelErrorIfNeeded();
-    });
-
-    sound.addEventListener("click", async () => {
-      if (soundBusy || videoFailed) return;
-
-      soundBusy = true;
-      sound.disabled = true;
-      ++playbackAttempt;
-
-      try {
-        video.muted = false;
-        await video.play();
-        soundEnabled = true;
-
-        if (!targetVisible || document.hidden) {
-          video.pause();
-        } else {
-          hideHintLater();
-        }
-
+      if (soundEnabled) {
         sound.style.display = "none";
-      } catch (error) {
-        video.muted = true;
-        soundEnabled = false;
-        showPlayButton();
+      }
 
-        showHint(
-          "Наведите камеру на открытку и нажмите кнопку ещё раз."
-        );
+      showHint("Открытка найдена", true);
+    });
 
-        console.error("Ошибка включения звука:", error);
-      } finally {
-        soundBusy = false;
-        sound.disabled = false;
-
-        if (
-          soundEnabled &&
-          targetVisible &&
-          !document.hidden &&
-          video.paused
-        ) {
-          playTrackedVideo();
-        }
+    video.addEventListener("waiting", () => {
+      if (tracked) {
+        showHint("Подгружаем видео…");
       }
     });
 
-    target.addEventListener("targetFound", () => {
-      targetVisible = true;
-
-      if (videoFailed) {
+    video.addEventListener("error", () => {
+      if (running) {
         showHint(
           "Видео не загрузилось. Обновите страницу."
         );
-        return;
       }
-
-      showHint("Открытка найдена");
-      playTrackedVideo();
     });
 
-    target.addEventListener("targetLost", () => {
-      targetVisible = false;
-      ++playbackAttempt;
-      video.pause();
-
-      showHint("Верните панель с QR в кадр");
+    video.addEventListener("timeupdate", () => {
+      if (
+        tracked &&
+        modelFailed &&
+        video.currentTime >= 53
+      ) {
+        showHint(
+          "Не удалось загрузить генератор. Обновите страницу."
+        );
+      }
     });
 
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) {
-        ++playbackAttempt;
         video.pause();
-      } else if (targetVisible) {
-        playTrackedVideo();
+      } else {
+        playVideo();
       }
     });
 
     window.addEventListener("pagehide", () => {
-      ++playbackAttempt;
       video.pause();
     });
 
     window.addEventListener("pageshow", () => {
-      if (targetVisible && !document.hidden) {
-        playTrackedVideo();
+      if (running) {
+        playVideo();
       }
     });
 
-    generator.addEventListener("model-error", () => {
-      modelFailed = true;
-      showModelErrorIfNeeded();
-    });
+    startButton.onclick = start;
 
-    generator.addEventListener("model-loaded", () => {
-      modelFailed = false;
-    });
+    // Ранний автоматический запрос камеры.
+    start();
   </script>
 </body>
 </html>
